@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Mangalam — Quality & Safety Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--f:#1B3A28;--fm:#254d36;--g:#C89028;--gp:rgba(200,144,40,0.15);--cr:#F7F4EE;--cd:#EDE9E1;--bd:#D4CBB8;--tx:#1a1a1a;--mu:#6a6a6a;--wh:#fff;--dn:#c0392b;--dnb:#fdecea;--ok:#1B7A3E;--okb:#e8f5ee;--wn:#b8860b;--wnb:#fffbeb;--qc:#1e40af;--qcb:#dbeafe;--sc:#991b1b;--scb:#fee2e2;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Jost',sans-serif;background:var(--cr);color:var(--tx);min-height:100vh;}
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--f);}
+.lcard{background:var(--wh);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.llogo{text-align:center;margin-bottom:24px;}
+.llogomark{width:52px;height:52px;background:var(--g);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:25px;color:var(--f);font-weight:700;margin-bottom:10px;}
+.llogo h1{font-family:'Playfair Display',serif;font-size:20px;color:var(--f);}
+.llogo p{font-size:11px;color:var(--mu);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.lf{margin-bottom:13px;}.lf label{display:block;font-size:10px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+.lf input{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:10px 13px;font-family:'Jost',sans-serif;font-size:13px;background:var(--cr);}
+.lf input:focus{border-color:var(--f);outline:none;background:var(--wh);}
+.lbtn{width:100%;background:var(--f);color:var(--cr);border:none;border-radius:8px;padding:12px;font-family:'Jost',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;}
+.lbtn:hover{background:var(--fm);}.lbtn:disabled{background:#aaa;cursor:not-allowed;}
+.lerr{background:var(--dnb);color:var(--dn);border-radius:8px;padding:9px 13px;font-size:12px;margin-top:10px;display:none;}
+#app{display:none;}
+.hdr{padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.hdr.quality{background:#1e3a8a;}.hdr.safety{background:#7f1d1d;}
+.hbrand{display:flex;align-items:center;gap:10px;}
+.hlogo{width:32px;height:32px;background:var(--g);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;color:var(--f);font-size:16px;font-weight:700;}
+.htitle{color:var(--cr);font-size:14px;font-weight:500;}.hsub{color:var(--g);font-size:10px;font-weight:300;letter-spacing:1px;text-transform:uppercase;}
+.hright{display:flex;align-items:center;gap:10px;}
+.hbadge{background:rgba(200,144,40,.2);border:1px solid var(--g);color:var(--g);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;}
+.hout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:var(--cr);font-family:'Jost',sans-serif;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;}
+.pg{max-width:860px;margin:0 auto;padding:24px 18px 100px;}
+.card{background:var(--wh);border-radius:12px;border:1px solid var(--bd);margin-bottom:16px;overflow:hidden;box-shadow:0 2px 10px rgba(27,58,40,.06);}
+.ch{padding:12px 16px;display:flex;align-items:center;gap:8px;}
+.ch.quality{background:#1e3a8a;}.ch.safety{background:#7f1d1d;}
+.chi{width:24px;height:24px;border-radius:5px;background:rgba(200,144,40,.2);display:flex;align-items:center;justify-content:center;font-size:12px;}
+.ch h2{color:var(--cr);font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.ch span{color:var(--g);font-size:10px;margin-left:auto;}
+.cb{padding:18px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.fr3{grid-template-columns:1fr 1fr 1fr;}
+.fr4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.ff{display:flex;flex-direction:column;gap:4px;}
+.ff label{font-size:10px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;}
+.ff input,.ff select,.ff textarea{border:1.5px solid var(--bd);border-radius:7px;padding:8px 10px;font-family:'Jost',sans-serif;font-size:13px;color:var(--tx);background:var(--cr);outline:none;}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--f);background:var(--wh);}
+.ff textarea{resize:vertical;min-height:72px;}
+/* SCORE WIDGETS */
+.score-section{margin-bottom:20px;}
+.score-section-title{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--cd);}
+.score-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.score-card{border:1.5px solid var(--bd);border-radius:10px;padding:14px;background:var(--cr);text-align:center;}
+.score-card label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;color:var(--mu);}
+.score-display{font-size:32px;font-weight:700;font-family:'Playfair Display',serif;margin-bottom:6px;transition:color .2s;}
+.score-slider{width:100%;accent-color:var(--f);}
+.score-ticks{display:flex;justify-content:space-between;font-size:9px;color:var(--mu);margin-top:3px;}
+.score-card.overall .score-display{font-size:42px;}
+/* SCORE COLORS */
+.score-high{color:var(--ok);}
+.score-mid{color:var(--wn);}
+.score-low{color:var(--dn);}
+/* FLOOR RATING TABLE */
+.frtbl{width:100%;border-collapse:collapse;}
+.frtbl th{font-size:10px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border-bottom:1.5px solid var(--cd);text-align:left;}
+.frtbl td{padding:8px 8px;border-bottom:1px solid var(--cd);vertical-align:middle;}
+.frtbl tr:last-child td{border-bottom:none;}
+.frtbl input[type=text],.frtbl select{border:1.5px solid var(--bd);border-radius:5px;padding:4px 7px;font-family:'Jost',sans-serif;font-size:12px;background:var(--cr);}
+.frtbl input[type=text]:focus,.frtbl select:focus{border-color:var(--f);outline:none;background:var(--wh);}
+.frtbl input[type=range]{width:80px;accent-color:var(--f);}
+.score-num{font-size:14px;font-weight:700;min-width:24px;text-align:center;}
+/* SITE / BUILDING SELECTORS */
+.sel-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.stag{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1.5px solid var(--bd);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:var(--cr);}
+.stag.active{border-color:var(--f);}
+.stag.active.quality{background:#1e3a8a;border-color:#1e3a8a;color:#fff;}
+.stag.active.safety{background:#7f1d1d;border-color:#7f1d1d;color:#fff;}
+/* SUBMIT BAR */
+.sbar{position:fixed;bottom:0;left:0;right:0;background:var(--wh);border-top:1px solid var(--bd);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,.05);}
+.sinfo{font-size:11px;color:var(--mu);}.sinfo strong{color:var(--f);}
+.sbtn{color:var(--cr);border:none;border-radius:8px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.sbtn.quality{background:#1e3a8a;}.sbtn.safety{background:#7f1d1d;}
+.sbtn:disabled{background:#aaa;cursor:not-allowed;}
+.toast{position:fixed;top:68px;right:18px;z-index:999;background:var(--f);color:var(--cr);padding:11px 16px;border-radius:10px;font-size:12px;box-shadow:0 8px 24px rgba(27,58,40,.25);transform:translateX(120%);transition:transform .3s;max-width:280px;}
+.toast.show{transform:translateX(0);}.toast.err{background:var(--dn);}
+@media(max-width:600px){.fr,.fr3,.fr4,.score-cards{grid-template-columns:1fr;}.pg{padding:12px 10px 100px;}}
+</style>
+</head>
+<body>
+<div id="login">
+  <div class="lcard">
+    <div class="llogo"><div class="llogomark">M</div><h1>Quality & Safety Portal</h1><p>Department Login</p></div>
+    <div class="lf"><label>Username</label><input type="text" id="lu" placeholder="quality_dept or safety_dept"/></div>
+    <div class="lf"><label>Password</label><input type="password" id="lp" onkeydown="if(event.key==='Enter')login()"/></div>
+    <button class="lbtn" id="lbtn" onclick="login()">Sign In →</button>
+    <div class="lerr" id="lerr">Invalid credentials.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="hdr" id="apphdr">
+    <div class="hbrand"><div class="hlogo">M</div><div><div class="htitle">Mangalam Landmarks</div><div class="hsub" id="hrolelbl">Department Portal</div></div></div>
+    <div class="hright"><div class="hbadge" id="hname">Dept</div><button onclick="openPwdModal()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:var(--cr);font-family:'Jost',sans-serif;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer">🔑 Password</button>
+    <button class="hout" onclick="logout()">Logout</button></div>
+  </div>
+  <div class="pg">
+    <div style="margin-bottom:20px">
+      <h1 style="font-family:'Playfair Display',serif;font-size:21px;color:var(--f)" id="ptitle">Rating Entry</h1>
+      <p style="color:var(--mu);font-size:12px;margin-top:3px" id="psubtitle">Select site and building, then rate per floor and overall.</p>
+    </div>
+
+    <!-- STEP 1: Site & Building -->
+    <div class="card" id="step1card">
+      <div class="ch" id="step1hdr"><div class="chi">📍</div><h2>Step 1 — Site & Building</h2></div>
+      <div class="cb">
+        <div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Select Site</div>
+          <div class="sel-row" id="site-sel"></div>
+        </div>
+        <div id="bld-wrap" style="display:none">
+          <div style="font-size:10px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Select Building</div>
+          <div class="sel-row" id="bld-sel"></div>
+        </div>
+        <div class="fr fr3" style="margin-top:14px">
+          <div class="ff"><label>Inspector Name</label><input type="text" id="finspector" placeholder="Your name"/></div>
+          <div class="ff"><label>Date</label><input type="date" id="fdate"/></div>
+          <div class="ff"><label>Visit Type</label><select id="fvisit"><option>Routine Inspection</option><option>Post-Pour Check</option><option>Safety Audit</option><option>Milestone Sign-off</option><option>Complaint Inspection</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Building-level rating -->
+    <div class="card" id="bld-rating-card" style="display:none">
+      <div class="ch" id="bld-rating-hdr"><div class="chi">🏢</div><h2 id="bld-rating-title">Step 2 — Building Overall Rating</h2></div>
+      <div class="cb" id="bld-rating-body"></div>
+    </div>
+
+    <!-- STEP 3: Floor-level ratings -->
+    <div class="card" id="floor-rating-card" style="display:none">
+      <div class="ch" id="floor-rating-hdr"><div class="chi">📐</div><h2>Step 3 — Floor-wise Ratings</h2><span>Rate each active floor</span></div>
+      <div class="cb">
+        <table class="frtbl"><thead id="floor-thead"></thead><tbody id="floor-tbody"></tbody></table>
+        <button onclick="addFloorRow()" style="background:var(--cd);border:1.5px solid var(--bd);border-radius:6px;padding:6px 12px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--f);margin-top:10px">+ Add Floor</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Observations -->
+    <div class="card" id="obs-card" style="display:none">
+      <div class="ch" id="obs-hdr"><div class="chi">📝</div><h2>Step 4 — Observations & Flags</h2></div>
+      <div class="cb" id="obs-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="sbar" id="sbar" style="display:none">
+  <div class="sinfo">Submitting <strong id="sbld-lbl">—</strong> · <strong id="ssite-lbl">—</strong></div>
+  <button class="sbtn" id="sbtn" onclick="submitRating()"><span>Submit Rating</span><span>→</span></button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SESSION_KEY = 'ml_qsdept';
+const API='YOUR_APPS_SCRIPT_URL_HERE';
+const ALL_SITES=['Miraya','Starview','Shyni','Niyoshi','Mithila-1','Mithila-2','Myra','Momento','Marvel'];
+const BLDMAP={'Miraya':['Building A','Building B','Building C','Building D','Amenities'],'Starview':['Residential A','Residential B','Residential C','Residential D','Commercial','Amenities'],'Shyni':['Building A','Building B','Amenities'],'Niyoshi':['Building A','Amenities'],'Mithila-1':['Building A','Amenities'],'Mithila-2':['Building A','Amenities'],'Myra':['Building A','Amenities'],'Momento':['Building A','Building B','Amenities'],'Marvel':['Building A','Building B','Building C','Building D','Building E','Amenities']};
+let session=JSON.parse(sessionStorage.getItem('ml_qsdept')||'null');
+let selSite=null,selBld=null;
+
+async function login(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
+  if(!u||!p)return;
+  const btn=document.getElementById('lbtn');btn.disabled=true;btn.textContent='Signing in...';
+  document.getElementById('lerr').style.display='none';
+  try{
+    let r;
+    if(API==='YOUR_APPS_SCRIPT_URL_HERE') r=demoLogin(u,p);
+    else{const res=await fetch(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);r=await res.json();}
+    if(r.success&&(r.role==='quality'||r.role==='safety')){session=r;sessionStorage.setItem('ml_qsdept',JSON.stringify(r));mount();}
+    else{const e=document.getElementById('lerr');e.textContent=r.role&&(r.role==='pm'||r.role==='store')?'Use the correct portal for your role.':'Invalid credentials.';e.style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
+  }catch(e){document.getElementById('lerr').textContent='Connection error.';document.getElementById('lerr').style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
+}
+function demoLogin(u,p){
+  const D=[{u:'quality_dept',p:'QA@Mangalam1',role:'quality',name:'Quality Inspector'},{u:'quality_hod',p:'QA@Mangalam2',role:'quality',name:'Quality HOD'},{u:'safety_dept',p:'SF@Mangalam1',role:'safety',name:'Safety Inspector'},{u:'safety_hod',p:'SF@Mangalam2',role:'safety',name:'Safety HOD'}];
+  const m=D.find(x=>x.u===u&&x.p===p);return m?{success:true,role:m.role,name:m.name,site:'',username:m.u}:{success:false};
+}
+function logout(){session=null;sessionStorage.removeItem('ml_qsdept');document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('sbar').style.display='none';}
+
+function mount(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('sbar').style.display='flex';
+  const isQ=session.role==='quality';
+  const roleLabel=isQ?'Quality Department':'Safety Department';
+  document.getElementById('apphdr').className='hdr '+(isQ?'quality':'safety');
+  document.getElementById('hrolelbl').textContent=roleLabel;
+  document.getElementById('hname').textContent=session.name;
+  document.getElementById('ptitle').textContent=isQ?'Quality Rating Entry':'Safety Rating Entry';
+  document.getElementById('psubtitle').textContent=isQ?'Rate buildings & floors across any site. Score /10 + observations.':'Audit buildings & floors across any site. Score /10 + observations.';
+  document.querySelectorAll('.ch.quality,.ch.safety').forEach(el=>{el.className='ch '+(isQ?'quality':'safety');});
+  document.getElementById('step1hdr').className='ch '+(isQ?'quality':'safety');
+  document.getElementById('sbtn').className='sbtn '+(isQ?'quality':'safety');
+  document.getElementById('fdate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('finspector').value=session.name;
+  buildSiteSel();
+  buildBldRatingCard();
+  buildFloorRatingCard();
+  buildObsCard();
+}
+
+function buildSiteSel(){
+  document.getElementById('site-sel').innerHTML=ALL_SITES.map(s=>`<div class="stag" onclick="selectSite('${s}')" id="stag-${s}">${s}</div>`).join('');
+}
+function selectSite(s){
+  selSite=s;selBld=null;
+  document.querySelectorAll('.stag').forEach(t=>t.classList.remove('active'));
+  const el=document.getElementById('stag-'+s);if(el){el.classList.add('active');el.classList.add(session.role);}
+  const bldWrap=document.getElementById('bld-wrap');bldWrap.style.display='block';
+  bldWrap.querySelector('#bld-sel').innerHTML=(BLDMAP[s]||['Building A']).map(b=>`<div class="stag" onclick="selectBuilding('${b}')" id="btag-${b.replace(/\s/g,'-')}">${b}</div>`).join('');
+  hideRatingCards();
+}
+function selectBuilding(b){
+  selBld=b;
+  document.querySelectorAll('#bld-sel .stag').forEach(t=>t.classList.remove('active'));
+  const el=document.getElementById('btag-'+b.replace(/\s/g,'-'));if(el){el.classList.add('active');el.classList.add(session.role);}
+  document.getElementById('bld-rating-card').style.display='block';
+  document.getElementById('floor-rating-card').style.display='block';
+  document.getElementById('obs-card').style.display='block';
+  document.getElementById('bld-rating-title').textContent=`Step 2 — ${b} Overall Rating`;
+  document.getElementById('sbld-lbl').textContent=b;
+  document.getElementById('ssite-lbl').textContent=selSite;
+  resetFloorRows();
+}
+function hideRatingCards(){
+  ['bld-rating-card','floor-rating-card','obs-card'].forEach(id=>document.getElementById(id).style.display='none');
+}
+
+// ── BUILDING RATING CARD ──
+function buildBldRatingCard(){
+  const isQ=session?.role==='quality';
+  const body=document.getElementById('bld-rating-body');
+  if(isQ){
+    body.innerHTML=`<div class="score-section"><div class="score-section-title">Building-level scores (/10)</div>
+      <div class="score-cards">
+        <div class="score-card overall"><label>Overall Quality</label><div class="score-display" id="bq-overall-disp">5.0</div><input type="range" class="score-slider" id="bq-overall" min="0" max="10" step="0.5" value="5" oninput="updScore('bq-overall')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+        <div class="score-card"><label>Structural Quality</label><div class="score-display" id="bq-struct-disp">5.0</div><input type="range" class="score-slider" id="bq-struct" min="0" max="10" step="0.5" value="5" oninput="updScore('bq-struct')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+        <div class="score-card"><label>Finishing Quality</label><div class="score-display" id="bq-finish-disp">5.0</div><input type="range" class="score-slider" id="bq-finish" min="0" max="10" step="0.5" value="5" oninput="updScore('bq-finish')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+      </div></div>`;
+  } else {
+    body.innerHTML=`<div class="score-section"><div class="score-section-title">Building-level safety scores (/10)</div>
+      <div class="score-cards">
+        <div class="score-card overall"><label>Overall Safety</label><div class="score-display" id="bs-overall-disp">5.0</div><input type="range" class="score-slider" id="bs-overall" min="0" max="10" step="0.5" value="5" oninput="updScore('bs-overall')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+        <div class="score-card"><label>PPE Compliance</label><div class="score-display" id="bs-ppe-disp">5.0</div><input type="range" class="score-slider" id="bs-ppe" min="0" max="10" step="0.5" value="5" oninput="updScore('bs-ppe')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+        <div class="score-card"><label>Barricading</label><div class="score-display" id="bs-barr-disp">5.0</div><input type="range" class="score-slider" id="bs-barr" min="0" max="10" step="0.5" value="5" oninput="updScore('bs-barr')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+        <div class="score-card"><label>Scaffolding</label><div class="score-display" id="bs-scaf-disp">5.0</div><input type="range" class="score-slider" id="bs-scaf" min="0" max="10" step="0.5" value="5" oninput="updScore('bs-scaf')"/><div class="score-ticks"><span>0</span><span>5</span><span>10</span></div></div>
+      </div></div>`;
+  }
+}
+
+function updScore(id){
+  const el=document.getElementById(id);if(!el)return;
+  const v=parseFloat(el.value);
+  const disp=document.getElementById(id+'-disp');if(!disp)return;
+  disp.textContent=v.toFixed(1);
+  disp.className='score-display'+(v>=8?' score-high':v>=5?' score-mid':' score-low');
+}
+
+// ── FLOOR RATING TABLE ──
+function buildFloorRatingCard(){
+  const isQ=session?.role==='quality';
+  const thead=document.getElementById('floor-thead');
+  if(isQ) thead.innerHTML='<tr><th>Floor</th><th>Overall /10</th><th>Structural /10</th><th>Finishing /10</th><th>Observations</th><th></th></tr>';
+  else thead.innerHTML='<tr><th>Floor</th><th>Overall /10</th><th>PPE /10</th><th>Barricading /10</th><th>Scaffolding /10</th><th>Observations</th><th></th></tr>';
+  const defaults=['Basement','Ground Floor','1st Floor','2nd Floor','3rd Floor'];
+  document.getElementById('floor-tbody').innerHTML='';
+  defaults.forEach(f=>addFloorRow(f));
+}
+function resetFloorRows(){buildFloorRatingCard();}
+function addFloorRow(name=''){
+  const isQ=session?.role==='quality';
+  const id='flr'+Date.now()+Math.random();
+  const tr=document.createElement('tr');tr.id=id;
+  if(isQ){
+    tr.innerHTML=`<td><input type="text" value="${name}" placeholder="Floor" style="width:100px"/></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:70px;accent-color:var(--f)" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1);this.nextElementSibling.style.color=this.value>=8?'var(--ok)':this.value>=5?'var(--wn)':'var(--dn)'"/><span class="score-num score-high">7.0</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:70px;accent-color:var(--f)" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1);this.nextElementSibling.style.color=this.value>=8?'var(--ok)':this.value>=5?'var(--wn)':'var(--dn)'"/><span class="score-num score-high">7.0</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:70px;accent-color:var(--f)" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1);this.nextElementSibling.style.color=this.value>=8?'var(--ok)':this.value>=5?'var(--wn)':'var(--dn)'"/><span class="score-num score-high">7.0</span></div></td>
+      <td><input type="text" placeholder="Observations" style="width:160px"/></td>
+      <td><span onclick="document.getElementById('${id}').remove()" style="cursor:pointer;color:#ccc;font-size:15px">×</span></td>`;
+  } else {
+    tr.innerHTML=`<td><input type="text" value="${name}" placeholder="Floor" style="width:100px"/></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:60px;accent-color:#7f1d1d" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1)"/><span class="score-num score-high">7.0</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:60px;accent-color:#7f1d1d" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1)"/><span class="score-num score-high">7.0</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:60px;accent-color:#7f1d1d" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1)"/><span class="score-num score-high">7.0</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><input type="range" min="0" max="10" step="0.5" value="7" style="width:60px;accent-color:#7f1d1d" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1)"/><span class="score-num score-high">7.0</span></div></td>
+      <td><input type="text" placeholder="Observations" style="width:130px"/></td>
+      <td><span onclick="document.getElementById('${id}').remove()" style="cursor:pointer;color:#ccc;font-size:15px">×</span></td>`;
+  }
+  document.getElementById('floor-tbody').appendChild(tr);
+}
+
+// ── OBSERVATIONS CARD ──
+function buildObsCard(){
+  const isQ=session?.role==='quality';
+  document.getElementById('obs-hdr').className='ch '+(isQ?'quality':'safety');
+  const body=document.getElementById('obs-body');
+  if(isQ){
+    body.innerHTML=`<div class="fr"><div class="ff"><label>Critical Issues Observed</label><textarea id="obs-critical" placeholder="Describe any critical structural or finishing defects..."></textarea></div><div class="ff"><label>Recommendations</label><textarea id="obs-recommend" placeholder="Corrective actions required before next inspection..."></textarea></div></div>
+      <div class="fr"><div class="ff"><label>NCR (Non-Conformance) Count</label><input type="number" id="obs-ncr" min="0" value="0" placeholder="0"/></div><div class="ff"><label>Next Inspection Date</label><input type="date" id="obs-next"/></div></div>`;
+  } else {
+    body.innerHTML=`<div class="fr"><div class="ff"><label>Safety Violations Observed</label><textarea id="obs-violations" placeholder="Describe PPE non-compliance, unsafe practices, hazards..."></textarea></div><div class="ff"><label>Corrective Actions Required</label><textarea id="obs-actions" placeholder="Steps to be taken before next audit..."></textarea></div></div>
+      <div class="fr"><div class="ff"><label>Near-Miss Incidents</label><input type="number" id="obs-nearmiss" min="0" value="0" placeholder="0"/></div><div class="ff"><label>Next Safety Audit Date</label><input type="date" id="obs-next"/></div></div>`;
+  }
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────────
+async function submitRating(){
+  if(!selSite||!selBld){showToast('Select site and building first.',true);return;}
+  const isQ=session.role==='quality';
+  const btn=document.getElementById('sbtn');btn.disabled=true;btn.innerHTML='<span>Submitting...</span>';
+
+  const bldObs=isQ?
+    (document.getElementById('obs-critical')?.value||'')+' | Recommendations: '+(document.getElementById('obs-recommend')?.value||''):
+    (document.getElementById('obs-violations')?.value||'')+' | Actions: '+(document.getElementById('obs-actions')?.value||'');
+
+  const bldPayload={
+    action:isQ?'submitQuality':'submitSafety',
+    site:selSite,building:selBld,
+    date:document.getElementById('fdate').value,
+    level:'building',floor:'',
+    inspector:document.getElementById('finspector').value,
+    observations:bldObs,
+    ...(isQ?{
+      scoreOverall:document.getElementById('bq-overall')?.value||0,
+      scoreStructural:document.getElementById('bq-struct')?.value||0,
+      scoreFinishing:document.getElementById('bq-finish')?.value||0,
+    }:{
+      scoreOverall:document.getElementById('bs-overall')?.value||0,
+      scorePPE:document.getElementById('bs-ppe')?.value||0,
+      scoreBarricading:document.getElementById('bs-barr')?.value||0,
+      scoreScaffolding:document.getElementById('bs-scaf')?.value||0,
+    })
+  };
+
+  const floorRows=Array.from(document.querySelectorAll('#floor-tbody tr'));
+  const floorPayloads=floorRows.map(tr=>{
+    const inputs=tr.querySelectorAll('input[type=range]');
+    const texts=tr.querySelectorAll('input[type=text]');
+    return{
+      action:isQ?'submitQuality':'submitSafety',
+      site:selSite,building:selBld,
+      date:document.getElementById('fdate').value,
+      level:'floor',
+      floor:texts[0]?.value||'',
+      inspector:document.getElementById('finspector').value,
+      observations:texts[1]?.value||'',
+      ...(isQ?{scoreOverall:inputs[0]?.value||0,scoreStructural:inputs[1]?.value||0,scoreFinishing:inputs[2]?.value||0}:{scoreOverall:inputs[0]?.value||0,scorePPE:inputs[1]?.value||0,scoreBarricading:inputs[2]?.value||0,scoreScaffolding:inputs[3]?.value||0})
+    };
+  }).filter(p=>p.floor);
+
+  try{
+    if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+      await Promise.all([bldPayload,...floorPayloads].map(p=>fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})));
+    } else {
+      await new Promise(r=>setTimeout(r,800));
+      console.log('DEMO SUBMIT',[bldPayload,...floorPayloads]);
+    }
+    showToast(`✅ ${selBld} ${isQ?'quality':'safety'} ratings submitted`);
+    btn.innerHTML='<span>✓ Done</span>';
+    setTimeout(()=>{btn.disabled=false;btn.innerHTML='<span>Submit Rating</span><span>→</span>';},2500);
+  }catch(e){showToast('Submission failed',true);btn.disabled=false;btn.innerHTML='<span>Submit Rating</span><span>→</span>';}
+}
+
+function showToast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500);}
+if(session)mount();
+
+
+// ── PASSWORD CHANGE ──────────────────────────────────────────────
+function openPwdModal() {
+  document.getElementById('pwd-modal').style.display = 'flex';
+  document.getElementById('cpwd-username-lbl').textContent = session?.username || session?.name || '—';
+  document.getElementById('cpwd-current').value = '';
+  document.getElementById('cpwd-new').value = '';
+  document.getElementById('cpwd-confirm').value = '';
+  document.getElementById('cpwd-err').style.display = 'none';
+  document.getElementById('cpwd-ok').style.display = 'none';
+  document.getElementById('pwd-strength-fill').style.width = '0%';
+  document.getElementById('pwd-strength-lbl').textContent = '';
+  setTimeout(() => document.getElementById('cpwd-current').focus(), 100);
+}
+function closePwdModal() {
+  document.getElementById('pwd-modal').style.display = 'none';
+}
+// Close on backdrop click
+document.getElementById('pwd-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePwdModal();
+});
+
+function checkPwdStrength(pwd) {
+  const fill = document.getElementById('pwd-strength-fill');
+  const lbl  = document.getElementById('pwd-strength-lbl');
+  if (!pwd) { fill.style.width = '0%'; lbl.textContent = ''; return; }
+  let score = 0;
+  if (pwd.length >= 8)  score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  const levels = [
+    { w:'15%', bg:'var(--danger)', txt:'Very weak' },
+    { w:'30%', bg:'var(--danger)', txt:'Weak' },
+    { w:'55%', bg:'var(--warn)',   txt:'Moderate' },
+    { w:'75%', bg:'#ca8a04',      txt:'Good' },
+    { w:'100%',bg:'var(--ok)',     txt:'Strong' },
+  ];
+  const l = levels[Math.min(score, 4)];
+  fill.style.width = l.w;
+  fill.style.background = l.bg;
+  lbl.textContent = l.txt;
+  lbl.style.color = l.bg;
+}
+
+async function submitPwdChange() {
+  const current = document.getElementById('cpwd-current').value;
+  const newPwd  = document.getElementById('cpwd-new').value;
+  const confirm = document.getElementById('cpwd-confirm').value;
+  const errEl   = document.getElementById('cpwd-err');
+  const okEl    = document.getElementById('cpwd-ok');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  // Client-side validation
+  if (!current || !newPwd || !confirm) {
+    errEl.textContent = 'All fields are required.';
+    errEl.style.display = 'block'; return;
+  }
+  if (newPwd.length < 8) {
+    errEl.textContent = 'New password must be at least 8 characters.';
+    errEl.style.display = 'block'; return;
+  }
+  if (newPwd !== confirm) {
+    errEl.textContent = 'New passwords do not match.';
+    errEl.style.display = 'block'; return;
+  }
+  if (current === newPwd) {
+    errEl.textContent = 'New password must be different from your current password.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('cpwd-btn');
+  btn.disabled = true;
+  btn.textContent = 'Updating...';
+
+  const payload = {
+    action: 'changePassword',
+    username: session.username,
+    currentPassword: current,
+    newPassword: newPwd
+  };
+
+  try {
+    if (API === 'YOUR_APPS_SCRIPT_URL_HERE') {
+      // Demo mode — simulate success
+      await new Promise(r => setTimeout(r, 800));
+      okEl.textContent = '✓ Password updated successfully. (Demo mode — not actually saved)';
+      okEl.style.display = 'block';
+      // Update session password so re-login works in same session
+      if (session) session.password = newPwd;
+      setTimeout(closePwdModal, 2500);
+    } else {
+      const res = await fetch(API, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      // no-cors means we can't read the response body
+      // So we do a JSONP verify call to confirm
+      const verify = await jsonp(API + '?action=login&u=' + encodeURIComponent(session.username) + '&p=' + encodeURIComponent(newPwd));
+      if (verify.success) {
+        // Update session with new password
+        session.password = newPwd;
+        sessionStorage.setItem('ml_qsdept', JSON.stringify(session));
+        okEl.textContent = '✓ Password updated successfully. Please use your new password next time you log in.';
+        okEl.style.display = 'block';
+        setTimeout(closePwdModal, 3000);
+      } else {
+        // Password change may not have saved (no-cors limitation)
+        // Try direct JSON fetch
+        const res2 = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res2.json();
+        if (data.success) {
+          session.password = newPwd;
+          sessionStorage.setItem('ml_qsdept', JSON.stringify(session));
+          okEl.textContent = '✓ Password updated successfully.';
+          okEl.style.display = 'block';
+          setTimeout(closePwdModal, 3000);
+        } else {
+          errEl.textContent = data.error || 'Update failed. Please try again.';
+          errEl.style.display = 'block';
+        }
+      }
+    }
+  } catch(e) {
+    errEl.textContent = 'Connection error. Please try again.';
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Update Password';
+}
+
+</script>
+
+<!-- ── CHANGE PASSWORD MODAL ── -->
+<div id="pwd-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(42,42,42,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:3px;padding:36px;width:100%;max-width:400px;margin:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;border-top:3px solid var(--red)">
+    <button onclick="closePwdModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--light-grey);cursor:pointer;line-height:1">×</button>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--charcoal);margin-bottom:4px">Change Password</div>
+    <div style="font-size:10px;color:var(--warm-grey);letter-spacing:1px;text-transform:uppercase;margin-bottom:24px" id="cpwd-username-lbl">—</div>
+
+    <div class="ml-field" style="margin-bottom:12px">
+      <label>Current Password</label>
+      <input type="password" id="cpwd-current" placeholder="Enter your current password" autocomplete="current-password"/>
+    </div>
+    <div class="ml-field" style="margin-bottom:12px">
+      <label>New Password</label>
+      <input type="password" id="cpwd-new" placeholder="Min. 8 characters" autocomplete="new-password" oninput="checkPwdStrength(this.value)"/>
+      <div id="pwd-strength-bar" style="height:3px;border-radius:2px;margin-top:5px;background:var(--border);overflow:hidden">
+        <div id="pwd-strength-fill" style="height:100%;width:0%;transition:width 0.3s,background 0.3s;border-radius:2px"></div>
+      </div>
+      <div id="pwd-strength-lbl" style="font-size:9px;color:var(--warm-grey);margin-top:3px;letter-spacing:0.5px"></div>
+    </div>
+    <div class="ml-field" style="margin-bottom:18px">
+      <label>Confirm New Password</label>
+      <input type="password" id="cpwd-confirm" placeholder="Re-enter new password" autocomplete="new-password"/>
+    </div>
+
+    <div id="cpwd-err" style="background:var(--danger-bg);color:var(--danger);border-left:3px solid var(--red);border-radius:2px;padding:9px 12px;font-size:12px;margin-bottom:12px;display:none"></div>
+    <div id="cpwd-ok" style="background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok);border-radius:2px;padding:9px 12px;font-size:12px;margin-bottom:12px;display:none"></div>
+
+    <button onclick="submitPwdChange()" id="cpwd-btn" style="width:100%;background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:12px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:1px;text-transform:uppercase;position:relative;overflow:hidden">
+      <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+      Update Password
+    </button>
+    <div style="font-size:10px;color:var(--light-grey);text-align:center;margin-top:12px">Password must be at least 8 characters. Contact RP/SSS if locked out.</div>
+  </div>
+</div>
+
+</body>
+</html>
