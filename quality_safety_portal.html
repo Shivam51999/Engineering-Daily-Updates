@@ -152,10 +152,7 @@ body{font-family:'Jost',sans-serif;background:var(--cr);color:var(--tx);min-heig
   </div>
 </div>
 
-<div class="sbar" id="sbar" style="display:none">
-  <div class="sinfo">Submitting <strong id="sbld-lbl">—</strong> · <strong id="ssite-lbl">—</strong></div>
-  <button class="sbtn" id="sbtn" onclick="submitRating()"><span>Submit Rating</span><span>→</span></button>
-</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -174,20 +171,20 @@ async function login(){
   try{
     let r;
     if(API==='YOUR_APPS_SCRIPT_URL_HERE') r=demoLogin(u,p);
-    else{const res=await fetch(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);r=await res.json();}
+    else{const res=await r = await jsonp(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);;}
     if(r.success&&(r.role==='quality'||r.role==='safety')){session=r;sessionStorage.setItem('ml_qsdept',JSON.stringify(r));mount();}
     else{const e=document.getElementById('lerr');e.textContent=r.role&&(r.role==='pm'||r.role==='store')?'Use the correct portal for your role.':'Invalid credentials.';e.style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
   }catch(e){document.getElementById('lerr').textContent='Connection error.';document.getElementById('lerr').style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
 }
 function demoLogin(u,p){
-  const D=[{u:'quality_dept',p:'QA@Mangalam1',role:'quality',name:'Quality Inspector'},{u:'quality_hod',p:'QA@Mangalam2',role:'quality',name:'Quality HOD'},{u:'safety_dept',p:'SF@Mangalam1',role:'safety',name:'Safety Inspector'},{u:'safety_hod',p:'SF@Mangalam2',role:'safety',name:'Safety HOD'}];
+  const D=[{u:'quality_dept',p:'QA@Mangalam1',role:'quality',name:'Quality Inspector',username:'quality_dept'},{u:'quality_hod',p:'QA@Mangalam2',role:'quality',name:'Quality HOD',username:'quality_hod'},{u:'safety_dept',p:'SF@Mangalam1',role:'safety',name:'Safety Inspector',username:'safety_dept'},{u:'safety_hod',p:'SF@Mangalam2',role:'safety',name:'Safety HOD',username:'safety_hod'}];
   const m=D.find(x=>x.u===u&&x.p===p);return m?{success:true,role:m.role,name:m.name,site:'',username:m.u}:{success:false};
 }
 function logout(){session=null;sessionStorage.removeItem('ml_qsdept');document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('sbar').style.display='none';}
 
 function mount(){
   document.getElementById('login').style.display='none';
-  document.getElementById('app').style.display='block';
+  document.getElementById('app').style.display='flex';
   document.getElementById('sbar').style.display='flex';
   const isQ=session.role==='quality';
   const roleLabel=isQ?'Quality Department':'Safety Department';
@@ -372,6 +369,7 @@ async function submitRating(){
 
 function showToast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500);}
 if(session)mount();
+document.addEventListener("DOMContentLoaded", initPwdModal);
 
 
 // ── PASSWORD CHANGE ──────────────────────────────────────────────
@@ -390,10 +388,13 @@ function openPwdModal() {
 function closePwdModal() {
   document.getElementById('pwd-modal').style.display = 'none';
 }
-// Close on backdrop click
-document.getElementById('pwd-modal').addEventListener('click', function(e) {
-  if (e.target === this) closePwdModal();
-});
+// Close on backdrop click - deferred until DOM ready
+function initPwdModal() {
+  const modal = document.getElementById('pwd-modal');
+  if (modal) modal.addEventListener('click', function(e) {
+    if (e.target === this) closePwdModal();
+  });
+}
 
 function checkPwdStrength(pwd) {
   const fill = document.getElementById('pwd-strength-fill');
@@ -550,5 +551,9 @@ async function submitPwdChange() {
   </div>
 </div>
 
+<div class="sbar" id="sbar" style="display:none">
+  <div class="sinfo">Submitting <strong id="sbld-lbl">—</strong> · <strong id="ssite-lbl">—</strong></div>
+  <button class="sbtn" id="sbtn" onclick="submitRating()"><span>Submit Rating</span><span>→</span></button>
+</div>
 </body>
 </html>
