@@ -496,11 +496,8 @@ canvas { max-height: 220px; }
 
 </div>
 
-<div class="ml-submit-bar" id="sbar" style="display:none">
-  <div class="ml-submit-info">Submitting daily stock for <strong id="ssite-lbl">—</strong></div>
-  <button class="ml-submit-btn" id="sbtn" onclick="submitMaterials()"><span>Submit Daily Stock</span><span style="font-size:16px">→</span></button>
-</div>
-<div class="ml-toast" id="toast"></div>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
@@ -538,25 +535,25 @@ async function login(){
   try{
     let r;
     if(API==='YOUR_APPS_SCRIPT_URL_HERE') r=demoLogin(u,p);
-    else{const res=await fetch(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);r=await res.json();}
+    else{const res=await r = await jsonp(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);;}
     if(r.success&&r.role==='store'){session=r;sessionStorage.setItem('ml_store',JSON.stringify(r));mount();}
     else{const e=document.getElementById('lerr');e.textContent=r.role&&r.role!=='store'?'Use the correct portal for your role.':'Invalid credentials.';e.style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
   }catch(e){document.getElementById('lerr').textContent='Connection error.';document.getElementById('lerr').style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
 }
 function demoLogin(u,p){
-  const D=[{u:'miraya_store',p:'ST@Miraya1',role:'store',site:'Miraya',name:'Store Miraya'},{u:'marvel_store',p:'ST@Marvel9',role:'store',site:'Marvel',name:'Store Marvel'},{u:'momento_store',p:'ST@Momento8',role:'store',site:'Momento',name:'Store Momento'}];
+  const D=[{u:'miraya_store',p:'ST@Miraya1',role:'store',site:'Miraya',name:'Store Miraya',username:'miraya_store'},{u:'marvel_store',p:'ST@Marvel9',role:'store',site:'Marvel',name:'Store Marvel',username:'marvel_store'},{u:'momento_store',p:'ST@Momento8',role:'store',site:'Momento',name:'Store Momento',username:'momento_store'}];
   const m=D.find(x=>x.u===u&&x.p===p);return m?{success:true,role:'store',site:m.site,name:m.name,username:m.u}:{success:false};
 }
 function logout(){session=null;sessionStorage.removeItem('ml_store');document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('sbar').style.display='none';}
 
 function mount(){
   document.getElementById('login').style.display='none';
-  document.getElementById('app').style.display='block';
+  document.getElementById('app').style.display='flex';
   document.getElementById('sbar').style.display='flex';
   document.getElementById('hsite').textContent=session.site+' · Store';
   document.getElementById('hname').textContent=session.name;
-  document.getElementById('entitle').textContent=session.site+' — Daily Material Stock';
-  document.getElementById('htitle').textContent=session.site+' — Material History';
+  const _et=document.getElementById('ptitle')||document.getElementById('entitle');if(_et)_et.textContent=session.site+' — Daily Material Stock';
+  const _ht=document.getElementById('htitle');if(_ht)_ht.textContent=session.site+' — Material History';
   document.getElementById('fsite').value=session.site;
   document.getElementById('fname').value=session.name;
   document.getElementById('fdate').value=new Date().toISOString().split('T')[0];
@@ -661,6 +658,7 @@ async function loadHist(){
 function stab(n,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tbc').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');document.getElementById('sbar').style.display=n==='entry'?'flex':'none';}
 function showToast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500);}
 if(session)mount();
+document.addEventListener("DOMContentLoaded", initPwdModal);
 
 
 
@@ -680,10 +678,13 @@ function openPwdModal() {
 function closePwdModal() {
   document.getElementById('pwd-modal').style.display = 'none';
 }
-// Close on backdrop click
-document.getElementById('pwd-modal').addEventListener('click', function(e) {
-  if (e.target === this) closePwdModal();
-});
+// Close on backdrop click - deferred until DOM ready
+function initPwdModal() {
+  const modal = document.getElementById('pwd-modal');
+  if (modal) modal.addEventListener('click', function(e) {
+    if (e.target === this) closePwdModal();
+  });
+}
 
 function checkPwdStrength(pwd) {
   const fill = document.getElementById('pwd-strength-fill');
@@ -840,5 +841,10 @@ async function submitPwdChange() {
   </div>
 </div>
 
+<div class="ml-toast" id="toast"></div>
+<div class="ml-submit-bar" id="sbar" style="display:none">
+  <div class="ml-submit-info">Submitting daily stock for <strong id="ssite-lbl">—</strong></div>
+  <button class="ml-submit-btn" id="sbtn" onclick="submitMaterials()"><span>Submit Daily Stock</span><span style="font-size:16px">→</span></button>
+</div>
 </body>
 </html>
