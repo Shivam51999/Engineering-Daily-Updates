@@ -157,7 +157,7 @@ body{font-family:'Jost',sans-serif;background:var(--cr);color:var(--tx);min-heig
 
 <script>
 const SESSION_KEY = 'ml_qsdept';
-const API='YOUR_APPS_SCRIPT_URL_HERE';
+const API='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec';
 const ALL_SITES=['Miraya','Starview','Shyni','Niyoshi','Mithila-1','Mithila-2','Myra','Momento','Marvel'];
 const BLDMAP={'Miraya':['Building A','Building B','Building C','Building D','Amenities'],'Starview':['Residential A','Residential B','Residential C','Residential D','Commercial','Amenities'],'Shyni':['Building A','Building B','Amenities'],'Niyoshi':['Building A','Amenities'],'Mithila-1':['Building A','Amenities'],'Mithila-2':['Building A','Amenities'],'Myra':['Building A','Amenities'],'Momento':['Building A','Building B','Amenities'],'Marvel':['Building A','Building B','Building C','Building D','Building E','Amenities']};
 let session=JSON.parse(sessionStorage.getItem('ml_qsdept')||'null');
@@ -170,7 +170,7 @@ async function login(){
   document.getElementById('lerr').style.display='none';
   try{
     let r;
-    if(API==='YOUR_APPS_SCRIPT_URL_HERE') r=demoLogin(u,p);
+    if(API==='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec') r=demoLogin(u,p);
     else{r = await jsonp(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);}
     if(r.success&&(r.role==='quality'||r.role==='safety')){session=r;sessionStorage.setItem('ml_qsdept',JSON.stringify(r));mount();}
     else{const e=document.getElementById('lerr');e.textContent=r.role&&(r.role==='pm'||r.role==='store')?'Use the correct portal for your role.':'Invalid credentials.';e.style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
@@ -355,8 +355,8 @@ async function submitRating(){
   }).filter(p=>p.floor);
 
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
-      if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API!=='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
+      if(API!=='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       // Submit building-level rating
       await postToSheet(bldPayload, { site:bldPayload.site, building:bldPayload.building, date:bldPayload.date, type: isQ?'quality':'safety' });
       // Submit floor-level ratings individually
@@ -466,7 +466,7 @@ async function submitPwdChange() {
   };
 
   try {
-    if (API === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    if (API === 'https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec') {
       // Demo mode — simulate success
       await new Promise(r => setTimeout(r, 800));
       okEl.textContent = '✓ Password updated successfully. (Demo mode — not actually saved)';
