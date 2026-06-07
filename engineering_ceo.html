@@ -502,7 +502,7 @@ canvas { max-height: 220px; }
 <script>
 
 
-const API='YOUR_APPS_SCRIPT_URL_HERE';
+const API='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec';
 const SITES=['Miraya','Starview','Shyni','Niyoshi','Mithila-1','Mithila-2','Myra','Momento','Marvel'];
 const BLDMAP={'Miraya':['Building A','Building B','Building C','Building D','Amenities'],'Starview':['Residential A','Residential B','Residential C','Residential D','Commercial','Amenities'],'Shyni':['Building A','Building B','Amenities'],'Niyoshi':['Building A','Amenities'],'Mithila-1':['Building A','Amenities'],'Mithila-2':['Building A','Amenities'],'Myra':['Building A','Amenities'],'Momento':['Building A','Building B','Amenities'],'Marvel':['Building A','Building B','Building C','Building D','Building E','Amenities']};
 const MAT_TH={'Cement':200,'Steel / TMT Bars':5,'Aggregate (20mm)':3,'Aggregate (40mm)':2,'Sand / River Sand':2,'Shuttering / Formwork':500,'Bricks / AAC Blocks':2000,'Tiles (Floor)':300,'Tiles (Wall)':200,'Waterproofing Membrane':50,'Paint (Primer)':50,'Paint (Final)':50,'PVC Pipes':50,'CPVC Pipes':30,'Electrical Conduit (PVC)':100,'GI Wire':20,'Binding Wire':10};
@@ -574,7 +574,7 @@ function jsonp(url, callbackName) {
 async function load(){
   try{
     let d;
-    if(API==='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API==='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       d=genDemo();
     } else {
       d = await jsonp(API + '?action=daily');
@@ -718,7 +718,7 @@ async function loadHist(){
   const days=parseInt(document.getElementById('h-days').value)||30;
   let d;
   try{
-    if(API==='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API==='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       d=genDemoHist(site,days);
     } else {
       const url = API + '?action=history' + (site ? '&site='+encodeURIComponent(site) : '') + '&days='+days;
