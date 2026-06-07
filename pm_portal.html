@@ -209,6 +209,21 @@ body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--c
 .bld-tag.commercial { border-left: 3px solid var(--blue); }
 .bld-tag.commercial.sel { background: var(--blue); border-color: var(--blue); }
 .bld-tag.residential { border-left: 3px solid var(--charcoal); }
+.bld-tag.done {
+  border-color: var(--ok) !important;
+  background: var(--ok-bg) !important;
+  color: var(--ok) !important;
+}
+.bld-tag.done::after {
+  content: ' ✓';
+  font-weight: 700;
+  font-size: 12px;
+}
+.bld-tag.done.sel {
+  background: var(--ok) !important;
+  border-color: var(--ok) !important;
+  color: var(--white) !important;
+}
 
 /* ── DATA TABLE ── */
 .ml-tbl { width: 100%; border-collapse: collapse; }
@@ -527,7 +542,7 @@ const API = 'YOUR_APPS_SCRIPT_URL_HERE';
 const ACTIVITIES = ['Excavation','PCC','Foundation','Plinth Beam','Column','Beam & Slab Shuttering','Reinforcement','Concrete Pour','Brickwork','Plastering','Tiling','Waterproofing','Electrical Conduit','Plumbing','Finishing','Landscaping','Clubhouse Work','Swimming Pool','Parking','Compound Wall'];
 const FLOOR_TYPES = ['Floor','Podium','Terrace','Refuge Floor','Stilt','Basement','Work Package','Zone'];
 let session = JSON.parse(sessionStorage.getItem('ml_pm')||'null');
-let buildings = [], selBuilding = null, histCharts = {};
+let buildings = [], selBuilding = null, histCharts = {}, submittedBuildings = new Set();
 
 // ── AUTH ──────────────────────────────────────────────────────────
 async function login() {
@@ -588,11 +603,16 @@ function demoBuildings(site){
 }
 function renderBSel(){
   const wrap=document.getElementById('bsel');
-  wrap.innerHTML=buildings.map(b=>`<div class="btag ${b.type}" data-bld="${b.building}" onclick="selectBuilding('${b.building}')">${b.building}</div>`).join('');
+  wrap.innerHTML=buildings.map(b=>{
+    const isDone = submittedBuildings.has(b.building);
+    const doneClass = isDone ? ' done' : '';
+    const selClass = b.building === selBuilding ? ' sel' : '';
+    return `<div class="btag ${b.type}${doneClass}${selClass}" data-bld="${b.building}" onclick="selectBuilding('${b.building}')">${b.building}</div>`;
+  }).join('');
 }
 function selectBuilding(name){
   selBuilding=name;
-  document.querySelectorAll('.btag').forEach(t=>t.classList.toggle('active',t.dataset.bld===name));
+  renderBSel(); // re-render to apply sel + done classes
   document.getElementById('floor-card-sub').textContent=name;
   document.getElementById('sbld-lbl').textContent=name;
   buildDefaultFloors(name);
@@ -609,7 +629,7 @@ async function addBuilding(){
   const type=document.getElementById('new-bld-type').value;
   if(!name)return;
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
+    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',mode:'headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
     buildings.push({site:session.site,building:name,type});
     renderBSel();
     document.getElementById('new-bld-name').value='';
@@ -641,11 +661,23 @@ async function submit(){
   const btn=document.getElementById('sbtn');btn.disabled=true;btn.innerHTML='<span>Submitting...</span>';
   const payload={action:'submitFloors',site:session.site,building:selBuilding,date:document.getElementById('fdate').value,labour:document.getElementById('flabour').value,pmName:session.name,siteStatus:document.getElementById('fstatus').value,nextMilestone:document.getElementById('fmilestone').value,generalNotes:document.getElementById('fnotes').value,floors,submittedAt:new Date().toISOString()};
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    showToast(`✅ ${selBuilding} submitted`);
+    if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+      const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+      const result = await res.json();
+      if(!result.success) throw new Error(result.error || 'Server error');
+    }
+    // Mark building as submitted
+    submittedBuildings.add(selBuilding);
+    renderBSel();
+    // Show confirmation modal
+    showConfirmModal(payload);
     btn.innerHTML='<span>✓ Done</span>';
-    setTimeout(()=>{btn.disabled=false;btn.innerHTML='<span>Submit Building Update</span><span>→</span>';},2500);
-  }catch(e){showToast('Submission failed',true);btn.disabled=false;btn.innerHTML='<span>Submit Building Update</span><span>→</span>';}
+    setTimeout(()=>{btn.disabled=false;btn.innerHTML='<span>Submit Building Update</span><span>→</span>';},2000);
+  }catch(e){
+    showToast('Submission failed: '+(e.message||'Check your connection'),true);
+    btn.disabled=false;
+    btn.innerHTML='<span>Submit Building Update</span><span>→</span>';
+  }
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────
@@ -697,7 +729,7 @@ async function loadHist(){
 function stab(n,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tbc').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');document.getElementById('sbar').style.display=n==='entry'?'flex':'none';}
 function showToast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500);}
 if(session)mount();
-document.addEventListener("DOMContentLoaded", initPwdModal);
+
 
 
 
@@ -799,39 +831,19 @@ async function submitPwdChange() {
     } else {
       const res = await fetch(API, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      // no-cors means we can't read the response body
-      // So we do a JSONP verify call to confirm
-      const verify = await jsonp(API + '?action=login&u=' + encodeURIComponent(session.username) + '&p=' + encodeURIComponent(newPwd));
-      if (verify.success) {
-        // Update session with new password
+      const data = await res.json();
+      if (data.success) {
         session.password = newPwd;
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-        okEl.textContent = '✓ Password updated successfully. Please use your new password next time you log in.';
+        okEl.textContent = '✓ Password updated successfully. Use your new password next login.';
         okEl.style.display = 'block';
         setTimeout(closePwdModal, 3000);
       } else {
-        // Password change may not have saved (no-cors limitation)
-        // Try direct JSON fetch
-        const res2 = await fetch(API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res2.json();
-        if (data.success) {
-          session.password = newPwd;
-          sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-          okEl.textContent = '✓ Password updated successfully.';
-          okEl.style.display = 'block';
-          setTimeout(closePwdModal, 3000);
-        } else {
-          errEl.textContent = data.error || 'Update failed. Please try again.';
-          errEl.style.display = 'block';
-        }
+        errEl.textContent = data.error || 'Update failed. Please try again.';
+        errEl.style.display = 'block';
       }
     }
   } catch(e) {
@@ -843,8 +855,128 @@ async function submitPwdChange() {
   btn.textContent = 'Update Password';
 }
 
+
+// ── CONFIRMATION MODAL ───────────────────────────────────────────
+function showConfirmModal(payload) {
+  const modal = document.getElementById('confirm-modal');
+  if (!modal) return;
+
+  // Populate details
+  document.getElementById('conf-site').textContent = payload.site || '—';
+  document.getElementById('conf-building').textContent = payload.building || '—';
+  document.getElementById('conf-date').textContent = new Date(payload.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('conf-timestamp').textContent = 'Submitted at ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('conf-labour').textContent = (payload.labour || 0) + ' workers on site';
+
+  // Floor summary
+  const floors = payload.floors || [];
+  const floorSummary = floors.map(f => `${f.floor} — ${f.status} (${f.pct}%)`).join(', ');
+  document.getElementById('conf-floors').textContent = floors.length + ' floor(s): ' + (floorSummary || '—');
+
+  // Status chip
+  const statusEl = document.getElementById('conf-status');
+  const status = payload.siteStatus || '—';
+  const chipColor = status==='On Track'?'var(--ok)':status==='Blocked'?'var(--danger)':'var(--warn)';
+  const chipBg = status==='On Track'?'var(--ok-bg)':status==='Blocked'?'var(--danger-bg)':'var(--warn-bg)';
+  statusEl.innerHTML = `<span style="background:${chipBg};color:${chipColor};font-size:10px;font-weight:700;padding:3px 9px;border-radius:2px">${status}</span>`;
+
+  // Milestone
+  const msEl = document.getElementById('conf-next-milestone');
+  const msText = document.getElementById('conf-milestone-text');
+  if (payload.nextMilestone) {
+    msEl.style.display = 'block';
+    msText.textContent = payload.nextMilestone;
+  } else {
+    msEl.style.display = 'none';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirm-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function submitNextBuilding() {
+  closeConfirmModal();
+  // Scroll back to building selector and clear selection
+  selBuilding = null;
+  document.getElementById('floor-card-sub').textContent = 'Select a building above';
+  document.getElementById('sbld-lbl').textContent = '—';
+  document.getElementById('ftbody').innerHTML = '';
+  renderBSel();
+  // Scroll to building selector
+  const bsel = document.getElementById('bsel');
+  if (bsel) bsel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Close confirm modal on backdrop click
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('confirm-modal');
+  if (modal) modal.addEventListener('click', function(e) {
+    if (e.target === this) closeConfirmModal();
+  });
+  initPwdModal();
+});
+
 </script>
 
+
+<!-- ── SUBMISSION CONFIRMATION MODAL ── -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(42,42,42,0.65);backdrop-filter:blur(3px);align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:3px;padding:0;width:100%;max-width:460px;margin:24px;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden">
+    <!-- Green top bar -->
+    <div style="background:var(--ok);padding:20px 24px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">✓</div>
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--white)">Submission Confirmed</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.75);margin-top:2px" id="conf-timestamp"></div>
+      </div>
+    </div>
+    <!-- Details -->
+    <div style="padding:20px 24px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 0;color:var(--warm-grey);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;font-size:10px;width:40%">Site</td>
+          <td style="padding:8px 0;font-weight:500;color:var(--charcoal)" id="conf-site">—</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 0;color:var(--warm-grey);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Building</td>
+          <td style="padding:8px 0;font-weight:600;color:var(--charcoal)" id="conf-building">—</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 0;color:var(--warm-grey);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Date</td>
+          <td style="padding:8px 0;color:var(--charcoal)" id="conf-date">—</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 0;color:var(--warm-grey);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Floors Submitted</td>
+          <td style="padding:8px 0;color:var(--charcoal)" id="conf-floors">—</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 0;color:var(--warm-grey);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Labour</td>
+          <td style="padding:8px 0;color:var(--charcoal)" id="conf-labour">—</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--warm-grey);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Site Status</td>
+          <td style="padding:8px 0" id="conf-status">—</td>
+        </tr>
+      </table>
+      <div id="conf-next-milestone" style="margin-top:12px;padding:10px 12px;background:var(--cream);border-radius:2px;border-left:3px solid var(--red);font-size:12px;color:var(--charcoal);display:none">
+        <span style="font-size:9px;font-weight:700;color:var(--warm-grey);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:3px">Next Milestone</span>
+        <span id="conf-milestone-text"></span>
+      </div>
+    </div>
+    <!-- Actions -->
+    <div style="padding:14px 24px;background:var(--cream);border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeConfirmModal()" style="background:var(--cream-dark);color:var(--charcoal);border:1px solid var(--border);border-radius:2px;padding:9px 20px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px">Close</button>
+      <button onclick="submitNextBuilding()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:9px 20px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px;position:relative;overflow:hidden">
+        <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+        Submit Another Building →
+      </button>
+    </div>
+  </div>
+</div>
 <!-- ── CHANGE PASSWORD MODAL ── -->
 <div id="pwd-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(42,42,42,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center">
   <div style="background:var(--white);border-radius:3px;padding:36px;width:100%;max-width:400px;margin:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;border-top:3px solid var(--red)">
