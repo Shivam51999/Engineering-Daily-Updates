@@ -608,7 +608,7 @@ async function submitMaterials(){
   const btn=document.getElementById('sbtn');btn.disabled=true;btn.innerHTML='<span>Submitting...</span>';
   const payload={action:'submitMaterials',site:session.site,date:document.getElementById('fdate').value,storeName:session.name,materials:mats,submittedAt:new Date().toISOString()};
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
     showToast(`✅ Materials submitted for ${session.site}`);
     btn.innerHTML='<span>✓ Done</span>';
     setTimeout(()=>{btn.disabled=false;btn.innerHTML='<span>Submit Daily Stock</span><span>→</span>';},2500);
@@ -760,8 +760,7 @@ async function submitPwdChange() {
     } else {
       const res = await fetch(API, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
       // no-cors means we can't read the response body
