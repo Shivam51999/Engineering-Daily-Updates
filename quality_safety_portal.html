@@ -356,7 +356,7 @@ async function submitRating(){
 
   try{
     if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
-      await Promise.all([bldPayload,...floorPayloads].map(p=>fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})));
+      await Promise.all([bldPayload,...floorPayloads].map(p=>fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(p) })));
     } else {
       await new Promise(r=>setTimeout(r,800));
       console.log('DEMO SUBMIT',[bldPayload,...floorPayloads]);
@@ -470,8 +470,7 @@ async function submitPwdChange() {
     } else {
       const res = await fetch(API, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
       // no-cors means we can't read the response body
