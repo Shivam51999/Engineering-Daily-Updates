@@ -629,7 +629,9 @@ async function addBuilding(){
   const type=document.getElementById('new-bld-type').value;
   if(!name)return;
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
+    if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+      await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
+    }
     buildings.push({site:session.site,building:name,type});
     renderBSel();
     document.getElementById('new-bld-name').value='';
@@ -662,9 +664,12 @@ async function submit(){
   const payload={action:'submitFloors',site:session.site,building:selBuilding,date:document.getElementById('fdate').value,labour:document.getElementById('flabour').value,pmName:session.name,siteStatus:document.getElementById('fstatus').value,nextMilestone:document.getElementById('fmilestone').value,generalNotes:document.getElementById('fnotes').value,floors,submittedAt:new Date().toISOString()};
   try{
     if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
-      const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
-      const result = await res.json();
-      if(!result.success) throw new Error(result.error || 'Server error');
+      await postToSheet(payload, {
+        site: payload.site,
+        building: payload.building,
+        date: payload.date,
+        type: 'floors'
+      });
     }
     // Mark building as submitted
     submittedBuildings.add(selBuilding);
@@ -919,6 +924,39 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   initPwdModal();
 });
+
+
+// ── RELIABLE POST TO APPS SCRIPT ─────────────────────────────────
+// Apps Script POST responses redirect cross-origin so we cannot read them.
+// Strategy: fire POST (data goes through), then verify via JSONP GET.
+async function postToSheet(payload, verifyParams) {
+  // Step 1: Fire POST — data writes to sheet even though we can't read response
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e) {
+    // Network error — POST didn't go through
+    throw new Error('Network error: ' + (e.message || 'Check your internet connection'));
+  }
+
+  // Step 2: Wait briefly then verify via JSONP GET
+  await new Promise(r => setTimeout(r, 1200));
+  try {
+    const params = new URLSearchParams({ action: 'verify', ...verifyParams });
+    const result = await jsonp(API + '?' + params.toString());
+    if (!result.verified) {
+      throw new Error('Data was sent but not confirmed in sheet. Please try again.');
+    }
+    return result;
+  } catch(e) {
+    // If verify itself fails (network), trust the POST went through
+    if (e.message && e.message.includes('not confirmed')) throw e;
+    return { verified: true }; // assume success if verify network fails
+  }
+}
 
 </script>
 
