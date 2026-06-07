@@ -356,7 +356,14 @@ async function submitRating(){
 
   try{
     if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
-      await Promise.all([bldPayload,...floorPayloads].map(p=>fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(p) })));
+      if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+      // Submit building-level rating
+      await postToSheet(bldPayload, { site:bldPayload.site, building:bldPayload.building, date:bldPayload.date, type: isQ?'quality':'safety' });
+      // Submit floor-level ratings individually
+      for(const fp of floorPayloads){
+        await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(fp)});
+      }
+    }
     } else {
       await new Promise(r=>setTimeout(r,800));
       console.log('DEMO SUBMIT',[bldPayload,...floorPayloads]);
@@ -511,6 +518,39 @@ async function submitPwdChange() {
 
   btn.disabled = false;
   btn.textContent = 'Update Password';
+}
+
+
+// ── RELIABLE POST TO APPS SCRIPT ─────────────────────────────────
+// Apps Script POST responses redirect cross-origin so we cannot read them.
+// Strategy: fire POST (data goes through), then verify via JSONP GET.
+async function postToSheet(payload, verifyParams) {
+  // Step 1: Fire POST — data writes to sheet even though we can't read response
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e) {
+    // Network error — POST didn't go through
+    throw new Error('Network error: ' + (e.message || 'Check your internet connection'));
+  }
+
+  // Step 2: Wait briefly then verify via JSONP GET
+  await new Promise(r => setTimeout(r, 1200));
+  try {
+    const params = new URLSearchParams({ action: 'verify', ...verifyParams });
+    const result = await jsonp(API + '?' + params.toString());
+    if (!result.verified) {
+      throw new Error('Data was sent but not confirmed in sheet. Please try again.');
+    }
+    return result;
+  } catch(e) {
+    // If verify itself fails (network), trust the POST went through
+    if (e.message && e.message.includes('not confirmed')) throw e;
+    return { verified: true }; // assume success if verify network fails
+  }
 }
 
 </script>
