@@ -538,7 +538,7 @@ function jsonp(url) {
   });
 }
 const SESSION_KEY = 'ml_pm';
-const API = 'YOUR_APPS_SCRIPT_URL_HERE';
+const API =  'https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec';
 const ACTIVITIES = ['Excavation','PCC','Foundation','Plinth Beam','Column','Beam & Slab Shuttering','Reinforcement','Concrete Pour','Brickwork','Plastering','Tiling','Waterproofing','Electrical Conduit','Plumbing','Finishing','Landscaping','Clubhouse Work','Swimming Pool','Parking','Compound Wall'];
 const FLOOR_TYPES = ['Floor','Podium','Terrace','Refuge Floor','Stilt','Basement','Work Package','Zone'];
 let session = JSON.parse(sessionStorage.getItem('ml_pm')||'null');
@@ -552,7 +552,7 @@ async function login() {
   document.getElementById('lerr').style.display='none';
   try {
     let r;
-    if(API==='YOUR_APPS_SCRIPT_URL_HERE') r=demoLogin(u,p);
+    if(API==='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec') r=demoLogin(u,p);
     else { r = await jsonp(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`); }
     if(r.success && r.role==='pm'){session=r;sessionStorage.setItem('ml_pm',JSON.stringify(r));mount();}
     else{showErr(r.role&&r.role!=='pm'?'Use the correct portal for your role.':'Invalid credentials.');btn.disabled=false;btn.textContent='Sign In →';}
@@ -586,7 +586,7 @@ async function mount() {
 // ── BUILDINGS ────────────────────────────────────────────────────
 async function loadBuildings() {
   try {
-    if(API==='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API==='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       buildings=demoBuildings(session.site);
     } else {
       buildings = await jsonp(API+'?action=buildings&site='+encodeURIComponent(session.site));
@@ -629,7 +629,7 @@ async function addBuilding(){
   const type=document.getElementById('new-bld-type').value;
   if(!name)return;
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API!=='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
     }
     buildings.push({site:session.site,building:name,type});
@@ -663,7 +663,7 @@ async function submit(){
   const btn=document.getElementById('sbtn');btn.disabled=true;btn.innerHTML='<span>Submitting...</span>';
   const payload={action:'submitFloors',site:session.site,building:selBuilding,date:document.getElementById('fdate').value,labour:document.getElementById('flabour').value,pmName:session.name,siteStatus:document.getElementById('fstatus').value,nextMilestone:document.getElementById('fmilestone').value,generalNotes:document.getElementById('fnotes').value,floors,submittedAt:new Date().toISOString()};
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API!=='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       await postToSheet(payload, {
         site: payload.site,
         building: payload.building,
@@ -709,7 +709,7 @@ async function loadHist(){
   const bld=document.getElementById('hbld').value;
   let rows;
   try{
-    if(API==='YOUR_APPS_SCRIPT_URL_HERE'){
+    if(API==='https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec'){
       rows=genDemoHist(session.site,bld,days);
     } else {
       const d = await jsonp(API+'?action=history&site='+encodeURIComponent(session.site)+'&days='+days);
@@ -825,7 +825,7 @@ async function submitPwdChange() {
   };
 
   try {
-    if (API === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    if (API === 'https://script.google.com/macros/s/AKfycbz3YEEbjUaSt24ALtAw4eH-sdMBxe3hXDep_gHRQv71XqAb1uSeSTOAMWPmsCJhS3tH/exec') {
       // Demo mode — simulate success
       await new Promise(r => setTimeout(r, 800));
       okEl.textContent = '✓ Password updated successfully. (Demo mode — not actually saved)';
