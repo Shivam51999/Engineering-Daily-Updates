@@ -629,7 +629,7 @@ async function addBuilding(){
   const type=document.getElementById('new-bld-type').value;
   if(!name)return;
   try{
-    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',mode:'headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
+    if(API!=='YOUR_APPS_SCRIPT_URL_HERE') await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addBuilding',site:session.site,building:name,type})});
     buildings.push({site:session.site,building:name,type});
     renderBSel();
     document.getElementById('new-bld-name').value='';
