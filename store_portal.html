@@ -535,7 +535,7 @@ async function login(){
   try{
     let r;
     if(API==='YOUR_APPS_SCRIPT_URL_HERE') r=demoLogin(u,p);
-    else{const res=await r = await jsonp(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);;}
+    else{r = await jsonp(`${API}?action=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);}
     if(r.success&&r.role==='store'){session=r;sessionStorage.setItem('ml_store',JSON.stringify(r));mount();}
     else{const e=document.getElementById('lerr');e.textContent=r.role&&r.role!=='store'?'Use the correct portal for your role.':'Invalid credentials.';e.style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
   }catch(e){document.getElementById('lerr').textContent='Connection error.';document.getElementById('lerr').style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
