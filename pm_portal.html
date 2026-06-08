@@ -508,14 +508,36 @@ function renderBldTags() {
   });
 }
 
-function selectBld(name) {
+async function selectBld(name) {
   selBld = name;
   renderBldTags();
-  document.getElementById('floor-card-sub').textContent = 'Building: ' + name;
+  document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — loading...';
   document.getElementById('sbld-lbl').textContent = name;
   document.getElementById('ssite-lbl').textContent = user.site;
   document.getElementById('sbar').style.display='flex';
-  renderFloorDefaults();
+  // Load today's existing submission for this building from the sheet
+  try {
+    const r = await apiGet('daily', {site: user.site, date: todayStr()});
+    const rows = (r.ok ? r.data || [] : []).filter(f => f.building === name);
+    if (rows.length) {
+      const tb = document.getElementById('ftbody');
+      tb.innerHTML = rows.map(f => floorRow({
+        floor:    f.floor    || '',
+        type:     f.type     || 'Structural',
+        activity: f.activity || 'Shuttering',
+        status:   f.status   || 'In Progress',
+        pct:      f.pct      || 0,
+        remarks:  f.remarks  || ''
+      })).join('');
+      document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — ' + rows.length + ' floors from today\'s submission';
+    } else {
+      renderFloorDefaults();
+      document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — no submission today';
+    }
+  } catch(e) {
+    renderFloorDefaults();
+    document.getElementById('floor-card-sub').textContent = 'Building: ' + name;
+  }
 }
 
 const FLOOR_TYPES = ['Structural','Finishing','MEP','Common'];
