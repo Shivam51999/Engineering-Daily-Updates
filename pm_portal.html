@@ -499,10 +499,11 @@ function renderBldTags() {
   wrap.innerHTML='';
   buildings.forEach(b => {
     const tag = document.createElement('div');
-    tag.className='bld-tag' + (selBld===b.name?' sel':'');
-    tag.onclick = () => selectBld(b.name);
-    let dot = submittedToday.has(b.name)?'<span class="submitted-dot" title="Submitted today"></span>':'';
-    tag.innerHTML = b.name + dot;
+    const bname = b.building || b.name || '';
+    tag.className='bld-tag' + (selBld===bname?' sel':'');
+    tag.onclick = () => selectBld(bname);
+    let dot = submittedToday.has(bname)?'<span class="submitted-dot" title="Submitted today"></span>':'';
+    tag.innerHTML = bname + dot;
     wrap.appendChild(tag);
   });
 }
@@ -555,7 +556,7 @@ function addBld() {
   const type = document.getElementById('new-bld-type').value;
   if (!name) return;
   apiCall('addBuilding', {site:user.site, name, type}).then(r => {
-    if (r.ok) { buildings.push({site:user.site,name,type}); renderBldTags(); document.getElementById('new-bld-name').value=''; toast('Building added','ok'); }
+    if (r.ok) { buildings.push({site:user.site,building:name,type}); renderBldTags(); document.getElementById('new-bld-name').value=''; toast('Building added','ok'); }
     else toast(r.error||'Error','err');
   }).catch(e => toast(e.message,'err'));
 }
