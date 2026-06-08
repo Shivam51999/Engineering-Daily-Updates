@@ -490,9 +490,10 @@ function renderBldTags() {
   wrap.innerHTML='';
   buildings.forEach(b=>{
     const tag=document.createElement('div');
-    tag.className='bld-tag'+(selBld===b.name?' sel':'');
-    tag.textContent=b.name;
-    tag.onclick=()=>{ selBld=b.name; renderBldTags(); };
+    const bname = b.building || b.name || '';
+    tag.className='bld-tag'+(selBld===bname?' sel':'');
+    tag.textContent=bname;
+    tag.onclick=()=>{ selBld=bname; renderBldTags(); };
     wrap.appendChild(tag);
   });
 }
