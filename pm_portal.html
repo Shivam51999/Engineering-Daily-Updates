@@ -511,38 +511,59 @@ function renderBldTags() {
 async function selectBld(name) {
   selBld = name;
   renderBldTags();
-  document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — loading...';
+  document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — loading floors...';
   document.getElementById('sbld-lbl').textContent = name;
   document.getElementById('ssite-lbl').textContent = user.site;
   document.getElementById('sbar').style.display='flex';
+
+  // Step 1: Load fixed floor list from FloorSchedule (admin-defined)
+  // Step 2: Load today's already-submitted data for this building (if any)
+  // Step 3: Pre-fill each floor row with today's saved values; blank if not submitted yet
   try {
-    // Fetch last 30 days of history for this building
-    const r = await apiGet('history', {site: user.site, days: 30, building: name});
-    const all = (r.ok ? r.data || [] : []);
-    if (all.length) {
-      // Find the most recent date that has rows for this building
-      const dates = [...new Set(all.map(f => f.date))].sort().reverse();
-      const latestDate = dates[0];
-      const rows = all.filter(f => f.date === latestDate);
-      const tb = document.getElementById('ftbody');
-      tb.innerHTML = rows.map(f => floorRow({
-        floor:    f.floor    || '',
-        type:     f.type     || 'Structural',
-        activity: f.activity || 'Shuttering',
-        status:   f.status   || 'In Progress',
-        pct:      f.pct      || 0,
-        remarks:  f.remarks  || ''
-      })).join('');
-      const isToday = latestDate === todayStr();
-      document.getElementById('floor-card-sub').textContent = 'Building: ' + name
-        + ' — ' + rows.length + ' floors loaded'
-        + (isToday ? ' (today)' : ' (last saved: ' + latestDate + ')');
-    } else {
-      renderFloorDefaults();
-      document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — no previous data, showing defaults';
-    }
+    const [schR, histR] = await Promise.all([
+      apiGet('schedule', {site: user.site, building: name}),
+      apiGet('history',  {site: user.site, days: 7, building: name})
+    ]);
+
+    // Build floor list — from schedule if available, else use MASTER_FLOORS fallback
+    const schFloors = (schR.ok && schR.data && schR.data.length)
+      ? schR.data.map(r => r.floor).filter(Boolean)
+      : MASTER_FLOORS;
+
+    // Find today's submission for each floor (most recent date)
+    const hist = histR.ok ? histR.data || [] : [];
+    const todayData = {};
+    // First try today, then fall back to most recent date per floor
+    hist.forEach(f => {
+      if (!todayData[f.floor] || f.date > todayData[f.floor].date) {
+        todayData[f.floor] = f;
+      }
+    });
+
+    const tb = document.getElementById('ftbody');
+    tb.innerHTML = schFloors.map(floor => {
+      const saved = todayData[floor];
+      return floorRow({
+        floor,
+        type:     saved ? saved.type     : 'Structural',
+        activity: saved ? saved.activity : 'Shuttering',
+        status:   saved ? saved.status   : 'Not Started',
+        pct:      saved ? saved.pct      : 0,
+        remarks:  saved ? saved.remarks  : ''
+      });
+    }).join('');
+
+    const filled = Object.keys(todayData).length;
+    document.getElementById('floor-card-sub').textContent =
+      'Building: ' + name + ' — ' + schFloors.length + ' floors' +
+      (filled ? ' · ' + filled + ' with previous activity' : ' · fill in today\'s progress');
+
   } catch(e) {
-    renderFloorDefaults();
+    // Hard fallback — show master floor list blank
+    const tb = document.getElementById('ftbody');
+    tb.innerHTML = MASTER_FLOORS.map(floor => floorRow({
+      floor, type:'Structural', activity:'Shuttering', status:'Not Started', pct:0, remarks:''
+    })).join('');
     document.getElementById('floor-card-sub').textContent = 'Building: ' + name;
   }
 }
@@ -563,16 +584,22 @@ function floorRow(f) {
   </tr>`;
 }
 
-const DEFAULT_FLOORS = [
-  {floor:'Basement / Stilt',type:'Structural',activity:'Concreting',status:'In Progress',pct:0,remarks:''},
-  {floor:'Ground Floor',type:'Structural',activity:'Shuttering',status:'In Progress',pct:0,remarks:''},
-  {floor:'1st Floor',type:'Structural',activity:'Rebar/Steel',status:'Not Started',pct:0,remarks:''},
-  {floor:'2nd Floor',type:'Structural',activity:'Shuttering',status:'Not Started',pct:0,remarks:''},
+// Master floor list — used when admin has not set a schedule for this building yet
+// Admin portal > Floor Schedule sets the definitive list per building
+const MASTER_FLOORS = [
+  'Basement','Stilt / Podium','Ground Floor',
+  '1st Floor','2nd Floor','3rd Floor','4th Floor','5th Floor',
+  '6th Floor','7th Floor','8th Floor','9th Floor','10th Floor',
+  '11th Floor','12th Floor','13th Floor','14th Floor','15th Floor',
+  '16th Floor','17th Floor','18th Floor','19th Floor','Terrace / Top'
 ];
 
 function renderFloorDefaults() {
+  // kept for emergency fallback only — selectBld() handles normal loading
   const tb = document.getElementById('ftbody');
-  tb.innerHTML = DEFAULT_FLOORS.map(floorRow).join('');
+  tb.innerHTML = MASTER_FLOORS.map(floor =>
+    floorRow({floor, type:'Structural', activity:'Shuttering', status:'Not Started', pct:0, remarks:''})
+  ).join('');
 }
 
 function addFloor() {
