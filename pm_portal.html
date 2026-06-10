@@ -515,11 +515,15 @@ async function selectBld(name) {
   document.getElementById('sbld-lbl').textContent = name;
   document.getElementById('ssite-lbl').textContent = user.site;
   document.getElementById('sbar').style.display='flex';
-  // Load today's existing submission for this building from the sheet
   try {
-    const r = await apiGet('daily', {site: user.site, date: todayStr()});
-    const rows = (r.ok ? r.data || [] : []).filter(f => f.building === name);
-    if (rows.length) {
+    // Fetch last 30 days of history for this building
+    const r = await apiGet('history', {site: user.site, days: 30, building: name});
+    const all = (r.ok ? r.data || [] : []);
+    if (all.length) {
+      // Find the most recent date that has rows for this building
+      const dates = [...new Set(all.map(f => f.date))].sort().reverse();
+      const latestDate = dates[0];
+      const rows = all.filter(f => f.date === latestDate);
       const tb = document.getElementById('ftbody');
       tb.innerHTML = rows.map(f => floorRow({
         floor:    f.floor    || '',
@@ -529,10 +533,13 @@ async function selectBld(name) {
         pct:      f.pct      || 0,
         remarks:  f.remarks  || ''
       })).join('');
-      document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — ' + rows.length + ' floors from today\'s submission';
+      const isToday = latestDate === todayStr();
+      document.getElementById('floor-card-sub').textContent = 'Building: ' + name
+        + ' — ' + rows.length + ' floors loaded'
+        + (isToday ? ' (today)' : ' (last saved: ' + latestDate + ')');
     } else {
       renderFloorDefaults();
-      document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — no submission today';
+      document.getElementById('floor-card-sub').textContent = 'Building: ' + name + ' — no previous data, showing defaults';
     }
   } catch(e) {
     renderFloorDefaults();
