@@ -261,6 +261,7 @@ canvas{max-height:220px}
 <div class="ml-tabs">
   <div class="ml-tab active" onclick="stab('portfolio',this)">🗂️ Portfolio</div>
   <div class="ml-tab" onclick="stab('timeline',this);renderTimeline()">📅 Timeline RAG</div>
+  <div class="ml-tab" onclick="stab('qualityflags',this);renderQualityFlags()">🚩 Quality Flags</div>
   <div class="ml-tab" onclick="stab('floors',this)">📐 Floor Progress</div>
   <div class="ml-tab" onclick="stab('materials',this)">📦 Materials</div>
   <div class="ml-tab" onclick="stab('quality',this)">🔍 Quality</div>
@@ -298,6 +299,35 @@ canvas{max-height:220px}
     <!-- Milestones -->
     <div class="ml-section-label" style="margin-top:24px"><h2>Project Milestones</h2></div>
     <div id="mil-body"></div>
+  </div>
+
+  <!-- QUALITY FLAGS -->
+  <div class="ml-tc" id="tab-qualityflags">
+    <div class="ml-kpi-strip" id="qf-kpis">
+      <div class="ml-kpi green"><div class="ml-kpi-label">Green Flags</div><div class="ml-kpi-value green" id="qf-green">—</div><div class="ml-kpi-sub">last 30 days</div></div>
+      <div class="ml-kpi amber"><div class="ml-kpi-label">Yellow Flags</div><div class="ml-kpi-value amber" id="qf-yellow">—</div><div class="ml-kpi-sub">last 30 days</div></div>
+      <div class="ml-kpi red"><div class="ml-kpi-label">Red Flags</div><div class="ml-kpi-value red" id="qf-red">—</div><div class="ml-kpi-sub">last 30 days</div></div>
+      <div class="ml-kpi"><div class="ml-kpi-label">Repetitive Errors</div><div class="ml-kpi-value" id="qf-repeat">—</div><div class="ml-kpi-sub">flagged twice or more</div></div>
+    </div>
+
+    <div class="ml-hist-ctrl">
+      <select id="qf-days"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select>
+      <button onclick="renderQualityFlags()">↻ Refresh</button>
+    </div>
+
+    <div class="ml-section-label"><h2>Site-Level Status</h2></div>
+    <div class="sites-grid" id="qf-site-grid"></div>
+
+    <div class="ml-section-label" style="margin-top:24px"><h2>Building-Level Detail</h2></div>
+    <div id="qf-building-body"></div>
+
+    <div class="ml-section-label" style="margin-top:24px"><h2>Recent Flagged Items</h2></div>
+    <div class="ml-card" style="overflow:hidden">
+      <table class="ml-tbl">
+        <thead><tr><th>Site</th><th>Location</th><th>Activity</th><th>Date</th><th>Flag</th><th>Repeat?</th><th>Remarks</th><th>Reviewed By</th></tr></thead>
+        <tbody id="qf-log"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- FLOOR PROGRESS -->
@@ -464,7 +494,7 @@ function stab(id, el) {
 
 const SITES = ['Miraya','Starview','Shyni','Niyoshi','Mithila-1','Mithila-2','Myra','Momento','Marvel'];
 
-let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[];
+let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[];
 let matC1=null,matC2=null,qaC=null,sfC=null,hsC1=null,hsC2=null,hsC3=null,hsC4=null;
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -485,13 +515,14 @@ async function loadAll() {
   loadBar(10);
   try {
     const today = todayStr();
-    const [flR, matR, qaR, sfR, schR, milR] = await Promise.all([
+    const [flR, matR, qaR, sfR, schR, milR, revR] = await Promise.all([
       apiGet('allFloors',{days:30}),
       apiGet('allMaterials',{days:7}),
       apiGet('allQuality',{days:30}),
       apiGet('allSafety',{days:30}),
       apiGet('allSchedule'),
-      apiGet('allMilestones')
+      apiGet('allMilestones'),
+      apiGet('allReviews')
     ]);
     loadBar(70);
     allFloors  = flR.ok  ? flR.data  : [];
@@ -500,6 +531,7 @@ async function loadAll() {
     allSafety  = sfR.ok  ? sfR.data  : [];
     allSchedule= schR.ok ? schR.data : [];
     allMilestones = milR.ok ? milR.data : [];
+    allReviews = revR.ok ? revR.data : [];
     loadBar(100);
     document.getElementById('last-refresh').textContent = 'Last refresh: '+new Date().toLocaleTimeString('en-IN');
     renderPortfolio();
@@ -668,6 +700,125 @@ function renderTimeline() {
       milBody.appendChild(div);
     });
   }
+}
+
+// ── QUALITY FLAGS ─────────────────────────────────────────────────────────────
+function renderQualityFlags() {
+  const days = parseInt(document.getElementById('qf-days').value || 30);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+  const reviews = allReviews.filter(r => new Date(r.date) >= cutoff);
+
+  const g = reviews.filter(r => r.flag === 'green').length;
+  const y = reviews.filter(r => r.flag === 'yellow').length;
+  const rd = reviews.filter(r => r.flag === 'red').length;
+  const repeat = reviews.filter(r => r.repetitiveError === 'TRUE' || r.repetitiveError === true).length;
+
+  document.getElementById('qf-green').textContent = g;
+  document.getElementById('qf-yellow').textContent = y;
+  document.getElementById('qf-red').textContent = rd;
+  document.getElementById('qf-repeat').textContent = repeat;
+
+  // Site-level rollup — worst flag wins
+  const flagRank = { green: 0, yellow: 1, red: 2 };
+  const siteWorst = {};
+  reviews.forEach(r => {
+    if (!siteWorst[r.site] || flagRank[r.flag] > flagRank[siteWorst[r.site]]) {
+      siteWorst[r.site] = r.flag;
+    }
+  });
+
+  const grid = document.getElementById('qf-site-grid');
+  grid.innerHTML = '';
+  SITES.forEach(site => {
+    const siteReviews = reviews.filter(r => r.site === site);
+    const worst = siteWorst[site] || 'grey';
+    const counts = {
+      green: siteReviews.filter(r=>r.flag==='green').length,
+      yellow: siteReviews.filter(r=>r.flag==='yellow').length,
+      red: siteReviews.filter(r=>r.flag==='red').length
+    };
+    const card = document.createElement('div');
+    card.className = 'site-card';
+    const ragColor = worst === 'red' ? 'var(--rag-r)' : worst === 'yellow' ? 'var(--rag-a)' : worst === 'green' ? 'var(--rag-g)' : 'var(--light)';
+    card.innerHTML = `
+      <div class="site-card-hdr">
+        <div class="site-card-name">${site}</div>
+        ${siteReviews.length ? `<div class="rag ${worst==='yellow'?'amber':worst}"><div class="rag-dot"></div>${worst.charAt(0).toUpperCase()+worst.slice(1)}</div>` : '<span style="font-size:10px;color:rgba(255,255,255,.3)">No reviews</span>'}
+      </div>
+      <div class="site-card-body">
+        <div class="site-card-stat"><span class="site-card-stat-label">🟢 Green</span><span class="site-card-stat-val">${counts.green}</span></div>
+        <div class="site-card-stat"><span class="site-card-stat-label">🟡 Yellow</span><span class="site-card-stat-val">${counts.yellow}</span></div>
+        <div class="site-card-stat"><span class="site-card-stat-label">🔴 Red</span><span class="site-card-stat-val">${counts.red}</span></div>
+        <div class="site-card-stat"><span class="site-card-stat-label">Total Reviewed</span><span class="site-card-stat-val">${siteReviews.length}</span></div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  // Building-level detail, grouped by site+building
+  const bldGroups = {};
+  reviews.forEach(r => {
+    const k = `${r.site}||${r.building}`;
+    if (!bldGroups[k]) bldGroups[k] = { site: r.site, building: r.building, items: [] };
+    bldGroups[k].items.push(r);
+  });
+  const bldBody = document.getElementById('qf-building-body');
+  bldBody.innerHTML = '';
+  if (!Object.keys(bldGroups).length) {
+    bldBody.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm);font-size:12px">No quality reviews recorded yet in this period.</div>';
+  } else {
+    Object.values(bldGroups).forEach(grp => {
+      const counts = {
+        green: grp.items.filter(r=>r.flag==='green').length,
+        yellow: grp.items.filter(r=>r.flag==='yellow').length,
+        red: grp.items.filter(r=>r.flag==='red').length
+      };
+      const worst = counts.red ? 'red' : counts.yellow ? 'amber' : 'green';
+      const div = document.createElement('div');
+      div.className = 'ml-card'; div.style.marginBottom = '14px';
+      div.innerHTML = `<div class="site-group-hdr">${grp.site} — ${grp.building}
+          <span style="margin-left:auto;display:flex;gap:10px;font-size:10px">
+            <span style="color:#4ade80">🟢 ${counts.green}</span>
+            <span style="color:#fbbf24">🟡 ${counts.yellow}</span>
+            <span style="color:#f87171">🔴 ${counts.red}</span>
+          </span>
+        </div>
+        <table class="ml-tbl">
+          <thead><tr><th>Location</th><th>Activity</th><th>Date</th><th>Flag</th><th>Repeat?</th><th>Remarks</th></tr></thead>
+          <tbody>${grp.items.map(r => {
+            const loc = r.source === 'flat' ? `${r.floor} — Flat ${r.flat}` : r.floor;
+            const isRepeat = r.repetitiveError === 'TRUE' || r.repetitiveError === true;
+            return `<tr class="rag-row-${r.flag==='yellow'?'a':r.flag==='red'?'r':'g'}">
+              <td><strong>${loc}</strong></td>
+              <td>${r.activity}</td>
+              <td>${r.date}</td>
+              <td><div class="rag ${r.flag==='yellow'?'amber':r.flag}"><div class="rag-dot"></div>${r.flag.charAt(0).toUpperCase()+r.flag.slice(1)}</div></td>
+              <td>${isRepeat ? '<span class="chip chip-danger">Repeat</span>' : '—'}</td>
+              <td style="font-size:11px;color:var(--warm)">${r.remarks||'—'}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+      bldBody.appendChild(div);
+    });
+  }
+
+  // Recent flagged items log
+  const log = document.getElementById('qf-log');
+  const sorted = [...reviews].sort((a,b) => (b.reviewedAt||'').localeCompare(a.reviewedAt||''));
+  log.innerHTML = sorted.slice(0, 200).map(r => {
+    const loc = r.source === 'flat' ? `${r.building} — ${r.floor} — Flat ${r.flat}` : `${r.building} — ${r.floor}`;
+    const isRepeat = r.repetitiveError === 'TRUE' || r.repetitiveError === true;
+    return `<tr>
+      <td><strong>${r.site}</strong></td>
+      <td>${loc}</td>
+      <td>${r.activity}</td>
+      <td>${r.date}</td>
+      <td><div class="rag ${r.flag==='yellow'?'amber':r.flag}"><div class="rag-dot"></div>${r.flag.charAt(0).toUpperCase()+r.flag.slice(1)}</div></td>
+      <td>${isRepeat ? '<span class="chip chip-danger">Repeat</span>' : '—'}</td>
+      <td style="font-size:11px;color:var(--warm)">${r.remarks||'—'}</td>
+      <td>${r.reviewedBy||'—'}</td>
+    </tr>`;
+  }).join('');
+  if (!sorted.length) log.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--warm)">No flagged items yet</td></tr>';
 }
 
 // ── FLOOR PROGRESS TAB ────────────────────────────────────────────────────────
