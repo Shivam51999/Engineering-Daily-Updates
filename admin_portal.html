@@ -269,6 +269,7 @@ canvas{max-height:220px}
 
   <div class="ml-tabs">
     <div class="ml-tab active" onclick="stab('schedule',this)">📅 Floor Schedule</div>
+    <div class="ml-tab" onclick="stab('flatschedule',this)">🏠 Flat Schedule</div>
     <div class="ml-tab" onclick="stab('milestones',this)">🏁 Milestones</div>
     <div class="ml-tab" onclick="stab('overview',this);loadOverview()">🔍 Timeline Overview</div>
   </div>
@@ -324,6 +325,54 @@ canvas{max-height:220px}
       </div>
 
     </div><!-- /tab-schedule -->
+
+    <!-- FLAT SCHEDULE TAB -->
+    <div class="ml-tc" id="tab-flatschedule">
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🏠</div><h3>Set Flat Numbers per Floor</h3><span>Used by PM portal for flat-wise finishing tracking</span></div>
+        <div class="ml-card-body">
+          <div class="ml-grid-3" style="margin-bottom:0">
+            <div class="ml-field"><label>Site</label>
+              <select id="flatsch-site" onchange="loadBldFlatSch()">
+                <option value="">Select Site</option>
+                <option>Miraya</option><option>Starview</option><option>Shyni</option>
+                <option>Niyoshi</option><option>Mithila-1</option><option>Mithila-2</option>
+                <option>Myra</option><option>Momento</option><option>Marvel</option>
+              </select>
+            </div>
+            <div class="ml-field"><label>Building</label>
+              <select id="flatsch-bld" onchange="loadFloorsForFlatSch()"><option value="">Select Building</option></select>
+            </div>
+            <div class="ml-field"><label>Floor</label>
+              <select id="flatsch-floor" onchange="loadExistingFlatSchedule()"><option value="">Select Floor</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🚪</div><h3>Flats on this Floor</h3><span>One row per flat number</span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Flat Number</th><th></th></tr></thead>
+            <tbody id="flatsch-tbody"></tbody>
+          </table>
+          <div style="padding:12px 14px;display:flex;gap:8px">
+            <button class="ml-add-row" onclick="addFlatSchRow()">+ Add Flat</button>
+            <button onclick="loadDefaultFlats()" style="background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:9px 16px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--charcoal);margin-top:10px">Auto-generate (4 flats per floor)</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button id="flatsch-save-btn" onclick="saveFlatScheduleFn()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:12px 32px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;position:relative;overflow:hidden">
+          <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+          Save Flat List →
+        </button>
+      </div>
+
+    </div><!-- /tab-flatschedule -->
 
     <!-- MILESTONES TAB -->
     <div class="ml-tc" id="tab-milestones">
@@ -580,6 +629,88 @@ async function saveSchedule() {
     const r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username});
     if(!r.ok) throw new Error(r.error);
     toast(`✓ Schedule saved — ${rows.length} floors for ${bld}, ${site}`,'ok');
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled=false;
+}
+
+// ── FLAT SCHEDULE ─────────────────────────────────────────────
+function loadBldFlatSch() {
+  const site=document.getElementById('flatsch-site').value;
+  const sel=document.getElementById('flatsch-bld');
+  sel.innerHTML='<option value="">Select Building</option>';
+  (BLD_MAP[site]||[]).forEach(b=>sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
+  document.getElementById('flatsch-floor').innerHTML='<option value="">Select Floor</option>';
+  document.getElementById('flatsch-tbody').innerHTML='';
+}
+
+async function loadFloorsForFlatSch() {
+  const site=document.getElementById('flatsch-site').value, bld=document.getElementById('flatsch-bld').value;
+  const floorSel=document.getElementById('flatsch-floor');
+  floorSel.innerHTML='<option value="">Select Floor</option>';
+  document.getElementById('flatsch-tbody').innerHTML='';
+  if(!site||!bld) return;
+  try {
+    const r=await apiGet('schedule',{site,building:bld});
+    const floors=(r.ok&&r.data&&r.data.length) ? r.data.map(x=>x.floor).filter(Boolean) : DEFAULT_FLOORS_LIST;
+    floors.forEach(f=>floorSel.appendChild(Object.assign(document.createElement('option'),{text:f,value:f})));
+  } catch(e) {
+    DEFAULT_FLOORS_LIST.forEach(f=>floorSel.appendChild(Object.assign(document.createElement('option'),{text:f,value:f})));
+  }
+}
+
+async function loadExistingFlatSchedule() {
+  const site=document.getElementById('flatsch-site').value;
+  const bld=document.getElementById('flatsch-bld').value;
+  const floor=document.getElementById('flatsch-floor').value;
+  if(!site||!bld||!floor) return;
+  document.getElementById('flatsch-tbody').innerHTML='';
+  try {
+    const r=await apiGet('flatSchedule',{site,building:bld,floor});
+    if(r.ok&&r.data.length) {
+      r.data.forEach(row=>addFlatSchRow(row.flat));
+      toast('Flat list loaded','ok');
+    } else {
+      toast('No flats set yet for this floor — add below or auto-generate','');
+    }
+  } catch(e) { toast('Load failed: '+e.message,'err'); }
+}
+
+function flatSchRow(flatNo) {
+  return `<tr>
+    <td><input type="text" value="${flatNo||''}" class="flatsch-num" style="width:150px" placeholder="e.g. 201"/></td>
+    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px">✕</button></td>
+  </tr>`;
+}
+
+function addFlatSchRow(flatNo) {
+  document.getElementById('flatsch-tbody').insertAdjacentHTML('beforeend', flatSchRow(flatNo||''));
+}
+
+function loadDefaultFlats() {
+  const floor=document.getElementById('flatsch-floor').value;
+  if(!floor) { toast('Select a floor first','err'); return; }
+  // Try to derive a floor number prefix (e.g. "3rd Floor" -> 3 -> flats 301-304)
+  const match=floor.match(/(\d+)/);
+  const prefix=match?match[1]:'1';
+  document.getElementById('flatsch-tbody').innerHTML='';
+  for(let i=1;i<=4;i++) {
+    addFlatSchRow(prefix + '0' + i);
+  }
+  toast('4 flats auto-generated — edit numbers if needed','ok');
+}
+
+async function saveFlatScheduleFn() {
+  const site=document.getElementById('flatsch-site').value;
+  const bld=document.getElementById('flatsch-bld').value;
+  const floor=document.getElementById('flatsch-floor').value;
+  if(!site||!bld||!floor) { toast('Select site, building and floor','err'); return; }
+  const flats=Array.from(document.querySelectorAll('#flatsch-tbody tr')).map(tr=>tr.querySelector('.flatsch-num').value.trim()).filter(Boolean);
+  if(!flats.length) { toast('Add at least one flat','err'); return; }
+  const btn=document.getElementById('flatsch-save-btn'); btn.disabled=true;
+  try {
+    const r=await apiCall('saveFlatSchedule',{site,building:bld,floor,flats,updatedBy:user.username});
+    if(!r.ok) throw new Error(r.error);
+    toast(`✓ ${flats.length} flats saved for ${floor}, ${bld}`,'ok');
   } catch(e) { toast(e.message,'err'); }
   btn.disabled=false;
 }
