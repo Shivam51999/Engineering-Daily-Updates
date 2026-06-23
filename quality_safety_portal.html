@@ -314,9 +314,6 @@ canvas{max-height:220px}
               <label>Site</label>
               <select id="f-site" onchange="onSiteChange()">
                 <option value="">Select Site</option>
-                <option>Miraya</option><option>Starview</option><option>Shyni</option>
-                <option>Niyoshi</option><option>Mithila-1</option><option>Mithila-2</option>
-                <option>Myra</option><option>Momento</option><option>Marvel</option>
               </select>
             </div>
             <div class="ml-field"><label>Inspector Name</label><input type="text" id="f-inspector" placeholder="Full name"/></div>
@@ -445,9 +442,6 @@ canvas{max-height:220px}
 
       <div class="ml-hist-ctrl">
         <select id="rq-site"><option value="">All Sites</option>
-          <option>Miraya</option><option>Starview</option><option>Shyni</option>
-          <option>Niyoshi</option><option>Mithila-1</option><option>Mithila-2</option>
-          <option>Myra</option><option>Momento</option><option>Marvel</option>
         </select>
         <button onclick="loadReviewQueue()">↻ Refresh</button>
         <span style="font-size:10px;color:var(--warm)" id="rq-count"></span>
@@ -561,7 +555,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('footer-date').textContent = '© Mangalam Landmarks LLP ' + new Date().getFullYear();
   document.getElementById('f-date').value = todayStr();
   renderBldRatingBtns();
+  loadSiteDropdowns();
 });
+
+async function loadSiteDropdowns() {
+  try {
+    const r = await apiGet('sites', {});
+    const sites = r.ok ? r.data.map(s => s.site) : [];
+    const fSite = document.getElementById('f-site');
+    if (fSite) {
+      const cur = fSite.value;
+      fSite.innerHTML = '<option value="">Select Site</option>' + sites.map(s => `<option>${s}</option>`).join('');
+      if (sites.includes(cur)) fSite.value = cur;
+    }
+    const rqSite = document.getElementById('rq-site');
+    if (rqSite) {
+      const cur = rqSite.value;
+      rqSite.innerHTML = '<option value="">All Sites</option>' + sites.map(s => `<option>${s}</option>`).join('');
+      if (sites.includes(cur)) rqSite.value = cur;
+    }
+  } catch(e) { /* fail silently — dropdowns stay empty, user can retry */ }
+}
 
 async function doLogin() {
   const u = document.getElementById('lu').value.trim();
