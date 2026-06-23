@@ -268,7 +268,8 @@ canvas{max-height:220px}
   </div>
 
   <div class="ml-tabs">
-    <div class="ml-tab active" onclick="stab('schedule',this)">📅 Floor Schedule</div>
+    <div class="ml-tab active" onclick="stab('projects',this);loadProjectsTab()">🏗️ Manage Projects</div>
+    <div class="ml-tab" onclick="stab('schedule',this)">📅 Floor Schedule</div>
     <div class="ml-tab" onclick="stab('flatschedule',this)">🏠 Flat Schedule</div>
     <div class="ml-tab" onclick="stab('milestones',this)">🏁 Milestones</div>
     <div class="ml-tab" onclick="stab('overview',this);loadOverview()">🔍 Timeline Overview</div>
@@ -276,8 +277,51 @@ canvas{max-height:220px}
 
   <div class="ml-main">
 
+    <!-- MANAGE PROJECTS TAB -->
+    <div class="ml-tc active" id="tab-projects">
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">➕</div><h3>Add New Project</h3><span>Adds the project to every dropdown across the system</span></div>
+        <div class="ml-card-body">
+          <div class="ml-grid-2" style="margin-bottom:0">
+            <div class="ml-field"><label>Project Name</label>
+              <input type="text" id="new-proj-name" placeholder="e.g. Sapphire Heights"/>
+            </div>
+            <div class="ml-field"><label>&nbsp;</label>
+              <button onclick="addProject()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:11px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.5px;position:relative;overflow:hidden">
+                <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+                + Add Project
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🏗️</div><h3>Active Projects</h3><span id="proj-active-count"></span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Project Name</th><th>Added On</th><th>Added By</th><th></th></tr></thead>
+            <tbody id="proj-active-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🗄️</div><h3>Inactive / Archived Projects</h3><span>Hidden from dropdowns · historical data preserved</span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Project Name</th><th>Added On</th><th></th></tr></thead>
+            <tbody id="proj-inactive-tbody"></tbody>
+          </table>
+          <div id="proj-inactive-empty" style="padding:20px;text-align:center;color:var(--warm);font-size:12px;display:none">No archived projects</div>
+        </div>
+      </div>
+
+    </div><!-- /tab-projects -->
+
     <!-- FLOOR SCHEDULE TAB -->
-    <div class="ml-tc active" id="tab-schedule">
+    <div class="ml-tc" id="tab-schedule">
 
       <div class="ml-card">
         <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📅</div><h3>Set Floor Schedule</h3><span>Plan construction dates per floor per building</span></div>
@@ -286,9 +330,6 @@ canvas{max-height:220px}
             <div class="ml-field"><label>Site</label>
               <select id="sch-site" onchange="loadBldSch()">
                 <option value="">Select Site</option>
-                <option>Miraya</option><option>Starview</option><option>Shyni</option>
-                <option>Niyoshi</option><option>Mithila-1</option><option>Mithila-2</option>
-                <option>Myra</option><option>Momento</option><option>Marvel</option>
               </select>
             </div>
             <div class="ml-field"><label>Building</label>
@@ -301,7 +342,13 @@ canvas{max-height:220px}
               </div>
             </div>
           </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:12px;border-top:1px solid var(--border)">
+            <span style="font-size:10px;color:var(--warm);min-width:110px">No building yet?</span>
+            <input type="text" id="sch-new-bld-name" placeholder="New building name" style="border:1px solid var(--border);border-radius:2px;padding:7px 10px;font-family:'Jost',sans-serif;font-size:12px;background:var(--cream);outline:none;flex:1"/>
+            <button onclick="addBuildingFromAdmin()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:8px 16px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.5px">+ Add Building</button>
+          </div>
         </div>
+
       </div>
 
       <div class="ml-card">
@@ -336,9 +383,6 @@ canvas{max-height:220px}
             <div class="ml-field"><label>Site</label>
               <select id="flatsch-site" onchange="loadBldFlatSch()">
                 <option value="">Select Site</option>
-                <option>Miraya</option><option>Starview</option><option>Shyni</option>
-                <option>Niyoshi</option><option>Mithila-1</option><option>Mithila-2</option>
-                <option>Myra</option><option>Momento</option><option>Marvel</option>
               </select>
             </div>
             <div class="ml-field"><label>Building</label>
@@ -384,9 +428,6 @@ canvas{max-height:220px}
             <div class="ml-field"><label>Site</label>
               <select id="mil-site">
                 <option value="">Select Site</option>
-                <option>Miraya</option><option>Starview</option><option>Shyni</option>
-                <option>Niyoshi</option><option>Mithila-1</option><option>Mithila-2</option>
-                <option>Myra</option><option>Momento</option><option>Marvel</option>
               </select>
             </div>
             <div class="ml-field"><label>Actions</label>
@@ -442,6 +483,23 @@ canvas{max-height:220px}
 
 </div>
 <div class="ml-toast" id="toast"></div>
+
+<!-- Archive confirmation modal -->
+<div class="ml-modal-bg" id="archive-modal" style="display:none">
+  <div class="ml-modal">
+    <h3>Archive Project?</h3>
+    <p style="font-size:13px;color:var(--charcoal);line-height:1.7;margin-bottom:6px">
+      <strong id="archive-proj-name"></strong> will be hidden from all login dropdowns, building selectors, and new-entry forms.
+    </p>
+    <p style="font-size:12px;color:var(--warm);line-height:1.7">
+      All historical floor progress, materials, quality reports, and schedules for this project are kept — nothing is deleted. You can reactivate it anytime from the Inactive Projects list.
+    </p>
+    <div class="ml-modal-btns">
+      <button onclick="document.getElementById('archive-modal').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Cancel</button>
+      <button id="archive-confirm-btn" onclick="confirmArchive()" style="background:var(--danger);color:var(--white);border:none;border-radius:2px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer">Archive Project</button>
+    </div>
+  </div>
+</div>
 
 <script>
 
@@ -560,14 +618,136 @@ function doLogout() {
 function showApp() {
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='flex';
+  loadProjectsTab();
 }
 
-function loadBldSch() {
+// ── MANAGE PROJECTS ───────────────────────────────────────────
+let activeSitesCache = [];
+
+async function loadProjectsTab() {
+  try {
+    const r = await apiGet('sites', {includeInactive: 'true'});
+    const all = r.ok ? r.data : [];
+    const active = all.filter(s => s.status !== 'inactive');
+    const inactive = all.filter(s => s.status === 'inactive');
+    activeSitesCache = active.map(s => s.site);
+
+    document.getElementById('proj-active-count').textContent = active.length + ' active';
+
+    const activeTb = document.getElementById('proj-active-tbody');
+    activeTb.innerHTML = active.map(s => `<tr>
+      <td><strong>${s.site}</strong></td>
+      <td>${fmtDate(s.createdAt)}</td>
+      <td>${s.createdBy||'—'}</td>
+      <td><button onclick="openArchiveModal('${s.site.replace(/'/g,"\\'")}')" style="background:none;border:1px solid var(--border);border-radius:2px;padding:6px 14px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--danger)">Archive</button></td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--warm)">No active projects</td></tr>';
+
+    const inactiveTb = document.getElementById('proj-inactive-tbody');
+    const emptyMsg = document.getElementById('proj-inactive-empty');
+    if (inactive.length) {
+      emptyMsg.style.display = 'none';
+      inactiveTb.innerHTML = inactive.map(s => `<tr>
+        <td><strong>${s.site}</strong></td>
+        <td>${fmtDate(s.createdAt)}</td>
+        <td><button onclick="reactivateProject('${s.site.replace(/'/g,"\\'")}')" style="background:var(--ok);color:var(--white);border:none;border-radius:2px;padding:6px 14px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer">Reactivate</button></td>
+      </tr>`).join('');
+    } else {
+      inactiveTb.innerHTML = '';
+      emptyMsg.style.display = 'block';
+    }
+
+    // Keep all site dropdowns across the portal in sync
+    populateAllSiteDropdowns(activeSitesCache);
+  } catch(e) {
+    toast('Could not load projects: ' + e.message, 'err');
+  }
+}
+
+function populateAllSiteDropdowns(sites) {
+  ['sch-site','flatsch-site','mil-site'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select Site</option>' +
+      sites.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (sites.includes(current)) sel.value = current;
+  });
+}
+
+async function addProject() {
+  const input = document.getElementById('new-proj-name');
+  const name = input.value.trim();
+  if (!name) { toast('Enter a project name', 'err'); return; }
+  try {
+    const r = await apiCall('addSite', {site: name, createdBy: user.username});
+    if (!r.ok) throw new Error(r.error || 'Could not add project');
+    toast(`✓ "${name}" added`, 'ok');
+    input.value = '';
+    loadProjectsTab();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+let archiveTargetSite = null;
+function openArchiveModal(site) {
+  archiveTargetSite = site;
+  document.getElementById('archive-proj-name').textContent = site;
+  document.getElementById('archive-modal').style.display = 'flex';
+}
+
+async function confirmArchive() {
+  if (!archiveTargetSite) return;
+  const btn = document.getElementById('archive-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Archiving...';
+  try {
+    const r = await apiCall('deactivateSite', {site: archiveTargetSite});
+    if (!r.ok) throw new Error(r.error || 'Could not archive project');
+    toast(`✓ "${archiveTargetSite}" archived`, 'ok');
+    document.getElementById('archive-modal').style.display = 'none';
+    loadProjectsTab();
+  } catch(e) { toast(e.message, 'err'); }
+  btn.disabled = false; btn.textContent = 'Archive Project';
+  archiveTargetSite = null;
+}
+
+async function reactivateProject(site) {
+  try {
+    const r = await apiCall('reactivateSite', {site});
+    if (!r.ok) throw new Error(r.error || 'Could not reactivate project');
+    toast(`✓ "${site}" reactivated`, 'ok');
+    loadProjectsTab();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function addBuildingFromAdmin() {
+  const site = document.getElementById('sch-site').value;
+  const name = document.getElementById('sch-new-bld-name').value.trim();
+  if (!site) { toast('Select a site first', 'err'); return; }
+  if (!name) { toast('Enter a building name', 'err'); return; }
+  try {
+    const r = await apiCall('addBuilding', {site, name, type:'residential'});
+    if (!r.ok) throw new Error(r.error || 'Could not add building');
+    toast(`✓ Building "${name}" added to ${site}`, 'ok');
+    document.getElementById('sch-new-bld-name').value = '';
+    await loadBldSch();
+    document.getElementById('sch-bld').value = name;
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+
+async function loadBldSch() {
   const site=document.getElementById('sch-site').value;
   const sel=document.getElementById('sch-bld');
   sel.innerHTML='<option value="">Select Building</option>';
-  (BLD_MAP[site]||[]).forEach(b=>sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
   document.getElementById('sch-tbody').innerHTML='';
+  if (!site) return;
+  try {
+    const r = await apiGet('buildings', {site});
+    let names = (r.ok && r.data && r.data.length) ? r.data.map(b => b.building || b.name).filter(Boolean) : [];
+    if (!names.length) names = BLD_MAP[site] || []; // fallback for legacy hardcoded sites
+    names.forEach(b => sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
+  } catch(e) {
+    (BLD_MAP[site]||[]).forEach(b=>sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
+  }
 }
 
 async function loadExistingSchedule() {
