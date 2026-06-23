@@ -272,6 +272,7 @@ canvas{max-height:220px}
     <div class="ml-tab" onclick="stab('schedule',this)">📅 Floor Schedule</div>
     <div class="ml-tab" onclick="stab('flatschedule',this)">🏠 Flat Schedule</div>
     <div class="ml-tab" onclick="stab('milestones',this)">🏁 Milestones</div>
+    <div class="ml-tab" onclick="stab('rfi',this);loadRFIQueue()">📝 RFI Queue <span id="rfi-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
     <div class="ml-tab" onclick="stab('overview',this);loadOverview()">🔍 Timeline Overview</div>
   </div>
 
@@ -371,6 +372,24 @@ canvas{max-height:220px}
         </button>
       </div>
 
+      <div class="ml-card" style="margin-top:20px">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">👷</div><h3>Minimum Labour Required</h3><span>Used to verify "Labour shortage" delay claims</span></div>
+        <div class="ml-card-body">
+          <p style="font-size:11px;color:var(--warm);margin-bottom:14px;line-height:1.6">Set the minimum number of workers expected on site for this building. If a PM logs a delay due to "Labour shortage," the system checks their reported labour count against this number — below it, the claim is auto-verified; at or above it, it's flagged unverified.</p>
+          <div class="ml-grid-3" style="margin-bottom:0">
+            <div class="ml-field"><label>Minimum Labour Count</label>
+              <input type="number" min="0" id="minlabour-value" placeholder="e.g. 25"/>
+            </div>
+            <div class="ml-field"><label>&nbsp;</label>
+              <button onclick="saveMinLabourFn()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:11px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.5px">Save Threshold</button>
+            </div>
+            <div class="ml-field"><label>&nbsp;</label>
+              <span id="minlabour-current" style="font-size:11px;color:var(--warm);padding-top:9px;display:block">No threshold set yet</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /tab-schedule -->
 
     <!-- FLAT SCHEDULE TAB -->
@@ -461,6 +480,29 @@ canvas{max-height:220px}
       </div>
 
     </div><!-- /tab-milestones -->
+
+    <!-- RFI QUEUE TAB -->
+    <div class="ml-tc" id="tab-rfi">
+
+      <div class="ml-kpi-strip" id="rfi-kpis">
+        <div class="ml-kpi amber"><div class="ml-kpi-label">Pending</div><div class="ml-kpi-value amber" id="rfi-pending-count">—</div><div class="ml-kpi-sub">awaiting design team</div></div>
+        <div class="ml-kpi"><div class="ml-kpi-label">Received</div><div class="ml-kpi-value" id="rfi-received-count">—</div><div class="ml-kpi-sub">acknowledged, in progress</div></div>
+        <div class="ml-kpi green"><div class="ml-kpi-label">Resolved</div><div class="ml-kpi-value green" id="rfi-resolved-count">—</div><div class="ml-kpi-sub">closed out</div></div>
+      </div>
+
+      <div class="ml-hist-ctrl">
+        <select id="rfi-status-filter" onchange="loadRFIQueue()">
+          <option value="">All RFIs</option>
+          <option value="Pending">Pending Only</option>
+          <option value="Received">Received Only</option>
+          <option value="Resolved">Resolved Only</option>
+        </select>
+        <button onclick="loadRFIQueue()">↻ Refresh</button>
+      </div>
+
+      <div id="rfi-list"></div>
+
+    </div><!-- /tab-rfi -->
 
     <!-- OVERVIEW TAB -->
     <div class="ml-tc" id="tab-overview">
@@ -753,6 +795,7 @@ async function loadBldSch() {
 async function loadExistingSchedule() {
   const site=document.getElementById('sch-site').value, bld=document.getElementById('sch-bld').value;
   if(!site||!bld) return;
+  loadMinLabourForCurrentSelection();
   try {
     const r=await apiGet('schedule',{site,building:bld});
     if(r.ok&&r.data.length) {
@@ -950,6 +993,98 @@ async function saveMilestones() {
     toast(`✓ ${rows.length} milestones saved for ${site}`,'ok');
   } catch(e) { toast(e.message,'err'); }
   btn.disabled=false;
+}
+
+// ── MINIMUM LABOUR THRESHOLD ──────────────────────────────────
+async function loadMinLabourForCurrentSelection() {
+  const site = document.getElementById('sch-site').value;
+  const bld = document.getElementById('sch-bld').value;
+  const display = document.getElementById('minlabour-current');
+  const input = document.getElementById('minlabour-value');
+  if (!site || !bld) { display.textContent = 'Select site and building above'; input.value=''; return; }
+  try {
+    const r = await apiGet('minLabour', {site});
+    const match = (r.ok ? r.data : []).find(x => x.building === bld);
+    if (match) {
+      input.value = match.minLabour;
+      display.textContent = `Current threshold: ${match.minLabour} workers (set by ${match.updatedBy})`;
+    } else {
+      input.value = '';
+      display.textContent = 'No threshold set yet for this building';
+    }
+  } catch(e) { display.textContent = 'Could not load threshold'; }
+}
+
+async function saveMinLabourFn() {
+  const site = document.getElementById('sch-site').value;
+  const bld = document.getElementById('sch-bld').value;
+  const val = document.getElementById('minlabour-value').value;
+  if (!site || !bld) { toast('Select site and building first','err'); return; }
+  if (!val) { toast('Enter a minimum labour count','err'); return; }
+  try {
+    const r = await apiCall('saveMinLabour', {site, building: bld, minLabour: parseInt(val), updatedBy: user.username});
+    if (!r.ok) throw new Error(r.error);
+    toast(`✓ Minimum labour set to ${val} for ${bld}, ${site}`,'ok');
+    loadMinLabourForCurrentSelection();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+// ── RFI QUEUE (Design/Architecture acknowledges & resolves) ──
+async function loadRFIQueue() {
+  const status = document.getElementById('rfi-status-filter')?.value || '';
+  try {
+    const r = await apiGet('rfiQueue', {status});
+    const all = r.ok ? r.data : [];
+    document.getElementById('rfi-pending-count').textContent = all.filter(x=>x.status==='Pending').length;
+    document.getElementById('rfi-received-count').textContent = all.filter(x=>x.status==='Received').length;
+    document.getElementById('rfi-resolved-count').textContent = all.filter(x=>x.status==='Resolved').length;
+
+    const badge = document.getElementById('rfi-badge');
+    const pendingCount = all.filter(x=>x.status==='Pending').length;
+    if (pendingCount > 0) { badge.textContent = pendingCount; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+
+    const list = document.getElementById('rfi-list');
+    if (!all.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm);font-size:13px">No RFIs raised yet.</div>';
+      return;
+    }
+    list.innerHTML = all.slice().reverse().map(rfi => {
+      const statusColor = rfi.status==='Resolved' ? 'var(--ok)' : rfi.status==='Received' ? 'var(--blue)' : 'var(--rag-a)';
+      return `<div class="ml-card" style="margin-bottom:12px">
+        <div class="ml-card-hdr">
+          <div class="ml-card-hdr-icon">📝</div>
+          <h3>${rfi.building} — ${rfi.floor}</h3>
+          <span>${rfi.activity} · ${rfi.site} · raised ${fmtDateShort(rfi.raisedAt)}</span>
+          <span style="margin-left:auto;font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${statusColor}22;color:${statusColor}">${rfi.status}</span>
+        </div>
+        <div class="ml-card-body">
+          <div style="font-size:12px;color:var(--charcoal);margin-bottom:10px;padding:10px;background:var(--cream);border-radius:2px;border:1px solid var(--border)">${rfi.description||'No description provided'}</div>
+          <div style="font-size:11px;color:var(--warm);margin-bottom:12px">Raised by <strong>${rfi.raisedBy}</strong></div>
+          ${rfi.status !== 'Resolved' ? `
+          <div style="display:flex;gap:8px">
+            ${rfi.status === 'Pending' ? `<button onclick="updateRFI('${rfi.rfiId}','Received')" style="background:var(--blue);color:#fff;border:none;border-radius:2px;padding:8px 16px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Mark Received</button>` : ''}
+            <button onclick="updateRFI('${rfi.rfiId}','Resolved')" style="background:var(--ok);color:#fff;border:none;border-radius:2px;padding:8px 16px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Mark Resolved</button>
+          </div>` : `<div style="font-size:11px;color:var(--ok)">✓ Resolved by ${rfi.resolvedBy||'—'} on ${fmtDateShort(rfi.resolvedAt)}</div>`}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast('Could not load RFI queue: '+e.message,'err'); }
+}
+
+async function updateRFI(rfiId, newStatus) {
+  try {
+    const r = await apiCall('resolveRFI', {rfiId, status: newStatus, resolvedBy: user.username});
+    if (!r.ok) throw new Error(r.error);
+    toast(`✓ RFI marked ${newStatus}`,'ok');
+    loadRFIQueue();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+function fmtDateShort(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}); }
+  catch(e) { return d; }
 }
 
 // OVERVIEW
