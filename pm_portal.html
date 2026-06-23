@@ -210,6 +210,13 @@ canvas{max-height:220px}
 .floor-card-name{font-size:12px;font-weight:600;color:var(--charcoal);min-width:120px}
 .floor-card-body{padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr 90px;gap:10px;align-items:start}
 .floor-gate{margin-top:10px;padding:12px;background:var(--cream-d);border:1px dashed var(--border);border-radius:2px;display:none}
+.delay-panel{margin-top:10px;padding:12px;background:#fff8f0;border:1px dashed var(--rag-a);border-radius:2px;display:none}
+.delay-panel.show{display:block}
+.delay-panel-hdr{font-size:11px;font-weight:700;color:var(--rag-a);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.delay-verify-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;letter-spacing:.5px;margin-left:auto}
+.delay-verify-badge.verified{background:var(--ok-bg);color:var(--ok)}
+.delay-verify-badge.unverified{background:var(--danger-bg);color:var(--danger)}
+.delay-verify-badge.pending{background:var(--warn-bg);color:var(--warn)}
 .floor-gate.show{display:block}
 .floor-gate-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .floor-gate-row:last-child{margin-bottom:0}
@@ -590,6 +597,12 @@ async function selectBld(name) {
       ? schR.data.map(r => r.floor).filter(Boolean)
       : MASTER_FLOORS;
 
+    // Map floor name -> plannedEnd date, so the delay panel knows when a floor is overdue
+    const plannedEndMap = {};
+    if (schR.ok && schR.data) {
+      schR.data.forEach(r => { if (r.floor) plannedEndMap[r.floor] = r.plannedEnd || ''; });
+    }
+
     // Find today's submission for each floor (most recent date)
     const hist = histR.ok ? histR.data || [] : [];
     const todayData = {};
@@ -612,7 +625,10 @@ async function selectBld(name) {
         remarks:  saved ? saved.remarks  : '',
         photoUrl: saved ? saved.photoUrl : '',
         checklistDone: saved ? (saved.checklistDone === 'TRUE' || saved.checklistDone === true) : false,
-        checklistPdfUrl: saved ? saved.checklistPdfUrl : ''
+        checklistPdfUrl: saved ? saved.checklistPdfUrl : '',
+        plannedEnd: plannedEndMap[floor] || '',
+        delayReason: saved ? (saved.delayReason||'') : '',
+        delayDetail: saved ? (saved.delayDetail||'') : ''
       });
     }).join('');
 
@@ -646,9 +662,12 @@ function floorCard(f) {
     photoUrl: f.photoUrl||'', checklistDone: f.checklistDone||false, checklistPdfUrl: f.checklistPdfUrl||''
   };
   const showGate = f.status === 'Completed';
-  return `<div class="floor-card" data-key="${key}">
+  const isOverdue = f.plannedEnd && f.status !== 'Completed' && todayStr() > f.plannedEnd;
+  const showDelay = isOverdue;
+  return `<div class="floor-card" data-key="${key}" data-planned-end="${f.plannedEnd||''}">
     <div class="floor-card-hdr">
       <input type="text" value="${f.floor}" class="fl-floor floor-card-name" style="border:1px solid var(--border);border-radius:2px;padding:6px 9px;background:var(--white);font-family:'Jost',sans-serif;font-weight:600"/>
+      ${f.plannedEnd ? `<span style="font-size:10px;color:${isOverdue?'var(--danger)':'var(--warm)'};font-weight:${isOverdue?'700':'400'}">Planned end: ${f.plannedEnd}${isOverdue?' — OVERDUE':''}</span>` : ''}
       <button onclick="this.closest('.floor-card').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;margin-left:auto">✕ Remove</button>
     </div>
     <div class="floor-card-body">
@@ -666,6 +685,24 @@ function floorCard(f) {
       </div>
       <div class="ml-field" style="grid-column:1/-1"><label>Remarks</label>
         <input type="text" value="${f.remarks||''}" class="fl-remarks" placeholder="Remarks for this activity"/>
+      </div>
+    </div>
+    <div class="delay-panel${showDelay?' show':''}">
+      <div class="delay-panel-hdr">⚠️ This activity is past its planned end date — explain the delay
+        <span class="delay-verify-badge" style="display:none"></span>
+      </div>
+      <div class="ml-field" style="margin-bottom:8px"><label>Delay Reason</label>
+        <select class="fl-delay-reason" onchange="onDelayReasonChange(this)">
+          <option value="">Select reason</option>
+          ${DELAY_REASONS.map(r=>`<option${r===f.delayReason?' selected':''}>`+r+`</option>`).join('')}
+        </select>
+      </div>
+      <div class="ml-field"><label>Details</label>
+        <input type="text" value="${f.delayDetail||''}" class="fl-delay-detail" placeholder="Brief explanation"/>
+      </div>
+      <div class="delay-rfi-row" style="display:none;margin-top:8px">
+        <button type="button" class="gate-btn" onclick="raiseRFIForCard(this)">📝 Raise RFI to Design Team</button>
+        <span class="rfi-raised-note" style="font-size:11px;color:var(--ok);margin-left:8px;display:none">✓ RFI raised</span>
       </div>
     </div>
     <div class="floor-gate${showGate?' show':''}">
@@ -693,11 +730,55 @@ function floorCard(f) {
   </div>`;
 }
 
+const DELAY_REASONS = ['Material shortage','Labour shortage','Contractor unavailable','Drawing/design issue','Quality/Safety hold','Weather','Other'];
+
 function onFloorStatusChange(sel) {
   const card = sel.closest('.floor-card');
   const gate = card.querySelector('.floor-gate');
+  const delayPanel = card.querySelector('.delay-panel');
   if (sel.value === 'Completed') gate.classList.add('show');
   else gate.classList.remove('show');
+
+  const plannedEnd = card.dataset.plannedEnd;
+  const isOverdue = plannedEnd && sel.value !== 'Completed' && todayStr() > plannedEnd;
+  if (isOverdue) delayPanel.classList.add('show');
+  else delayPanel.classList.remove('show');
+}
+
+function onDelayReasonChange(sel) {
+  const card = sel.closest('.floor-card');
+  const rfiRow = card.querySelector('.delay-rfi-row');
+  const badge = card.querySelector('.delay-verify-badge');
+  badge.style.display = 'none';
+  badge.className = 'delay-verify-badge';
+  if (sel.value === 'Drawing/design issue') {
+    rfiRow.style.display = 'flex';
+    rfiRow.style.alignItems = 'center';
+  } else {
+    rfiRow.style.display = 'none';
+  }
+}
+
+async function raiseRFIForCard(btn) {
+  const card = btn.closest('.floor-card');
+  const floor = card.querySelector('.fl-floor').value;
+  const activity = card.querySelector('.fl-act').value;
+  const detail = card.querySelector('.fl-delay-detail').value;
+  btn.disabled = true; btn.textContent = 'Raising...';
+  try {
+    const r = await apiCall('raiseRFI', {
+      site: user.site, building: selBld, floor, activity,
+      raisedBy: user.username, description: detail || 'Drawing/design issue blocking this activity'
+    });
+    if (!r.ok) throw new Error(r.error || 'Could not raise RFI');
+    card.querySelector('.rfi-raised-note').style.display = 'inline';
+    btn.textContent = '✓ RFI Raised';
+    toast('RFI raised to Design team','ok');
+  } catch(e) {
+    toast(e.message,'err');
+    btn.textContent = '📝 Raise RFI to Design Team';
+  }
+  btn.disabled = false;
 }
 
 async function onPhotoSelected(input) {
@@ -787,6 +868,10 @@ async function doSubmit() {
   if (!cards.length) { toast('Add at least one floor','err'); return; }
 
   const floors = [];
+  const delaysToLog = [];
+  const labourVal = parseInt(document.getElementById('flabour').value||0);
+  const dateVal = document.getElementById('fdate').value;
+
   for (const card of cards) {
     const status = card.querySelector('.fl-status')?.value || '';
     const floor = card.querySelector('.fl-floor')?.value || '';
@@ -794,6 +879,7 @@ async function doSubmit() {
     const photoUrl = card.dataset.photoUrl || '';
     const checklistDone = card.querySelector('.fl-checklist-done')?.checked || false;
     const checklistPdfUrl = card.dataset.pdfUrl || '';
+    const plannedEnd = card.dataset.plannedEnd || '';
 
     // Client-side gate — catch missing requirements before hitting the API
     if (status === 'Completed') {
@@ -802,17 +888,35 @@ async function doSubmit() {
       if (!checklistPdfUrl) { toast(`Checklist PDF required for "${floor} — ${activity}"`,'err'); card.scrollIntoView({behavior:'smooth',block:'center'}); return; }
     }
 
+    // Delay reason is mandatory when overdue and not completed
+    const isOverdue = plannedEnd && status !== 'Completed' && todayStr() > plannedEnd;
+    let delayReason = '', delayDetail = '';
+    if (isOverdue) {
+      delayReason = card.querySelector('.fl-delay-reason')?.value || '';
+      delayDetail = card.querySelector('.fl-delay-detail')?.value || '';
+      if (!delayReason) {
+        toast(`Select a delay reason for "${floor} — ${activity}" — it's past its planned end date`,'err');
+        card.scrollIntoView({behavior:'smooth',block:'center'});
+        return;
+      }
+      delaysToLog.push({
+        site: user.site, building: selBld, floor, activity, date: dateVal,
+        plannedEnd, delayReason, delayDetail, actualLabour: labourVal,
+        submittedBy: user.username
+      });
+    }
+
     floors.push({
       floor, type: card.querySelector('.fl-type')?.value||'', activity, status,
       pct: parseFloat(card.querySelector('.fl-pct')?.value||0),
       remarks: card.querySelector('.fl-remarks')?.value||'',
-      photoUrl, checklistDone, checklistPdfUrl
+      photoUrl, checklistDone, checklistPdfUrl, delayReason, delayDetail
     });
   }
 
   const payload = {
-    site:user.site, building:selBld, date:document.getElementById('fdate').value,
-    labour:parseInt(document.getElementById('flabour').value||0),
+    site:user.site, building:selBld, date:dateVal,
+    labour:labourVal,
     contractor:document.getElementById('fcontractor').value,
     floors, submittedBy:user.username
   };
@@ -821,10 +925,27 @@ async function doSubmit() {
   try {
     const r = await apiCall('submitFloors', payload);
     if (!r.ok) throw new Error(r.error||'Submission failed');
+
+    // Log each delay separately — runs the verification engine per item
+    let verifiedCount = 0, unverifiedCount = 0;
+    for (const d of delaysToLog) {
+      try {
+        const dr = await apiCall('submitDelay', d);
+        if (dr.ok && dr.verification) {
+          if (dr.verification.status === 'verified') verifiedCount++;
+          else unverifiedCount++;
+        }
+      } catch(e) { /* don't block the main submission on a delay-log failure */ }
+    }
+
     submittedToday.add(selBld); renderBldTags();
     toast('✓ Submitted successfully','ok');
+    let delayNote = '';
+    if (delaysToLog.length) {
+      delayNote = `<br><br><b>Delay reasons logged:</b> ${delaysToLog.length}<br><b>Auto-verified:</b> ${verifiedCount}<br><b>Pending review:</b> ${unverifiedCount}`;
+    }
     document.getElementById('confirm-body').innerHTML =
-      `<b>Site:</b> ${payload.site}<br><b>Building:</b> ${payload.building}<br><b>Date:</b> ${payload.date}<br><b>Floors submitted:</b> ${floors.length}<br><b>Labour:</b> ${payload.labour}`;
+      `<b>Site:</b> ${payload.site}<br><b>Building:</b> ${payload.building}<br><b>Date:</b> ${payload.date}<br><b>Floors submitted:</b> ${floors.length}<br><b>Labour:</b> ${payload.labour}${delayNote}`;
     document.getElementById('confirm-modal').style.display='flex';
   } catch(e) { toast(e.message,'err'); }
   btn.disabled=false; btn.querySelector('span').textContent='Submit Building Update';
