@@ -261,6 +261,7 @@ canvas{max-height:220px}
 <div class="ml-tabs">
   <div class="ml-tab active" onclick="stab('portfolio',this)">🗂️ Portfolio</div>
   <div class="ml-tab" onclick="stab('timeline',this);renderTimeline()">📅 Timeline RAG</div>
+  <div class="ml-tab" onclick="stab('escalations',this);renderEscalations()">🚨 Delay Escalations <span id="esc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
   <div class="ml-tab" onclick="stab('qualityflags',this);renderQualityFlags()">🚩 Quality Flags</div>
   <div class="ml-tab" onclick="stab('floors',this)">📐 Floor Progress</div>
   <div class="ml-tab" onclick="stab('materials',this)">📦 Materials</div>
@@ -299,6 +300,30 @@ canvas{max-height:220px}
     <!-- Milestones -->
     <div class="ml-section-label" style="margin-top:24px"><h2>Project Milestones</h2></div>
     <div id="mil-body"></div>
+  </div>
+
+  <!-- DELAY ESCALATIONS -->
+  <div class="ml-tc" id="tab-escalations">
+    <div class="ml-kpi-strip" id="esc-kpis">
+      <div class="ml-kpi red"><div class="ml-kpi-label">Needs Your Review</div><div class="ml-kpi-value red" id="esc-pending">—</div><div class="ml-kpi-sub">unverified or unverifiable</div></div>
+      <div class="ml-kpi green"><div class="ml-kpi-label">Auto-Verified</div><div class="ml-kpi-value green" id="esc-verified">—</div><div class="ml-kpi-sub">last 30 days</div></div>
+      <div class="ml-kpi amber"><div class="ml-kpi-label">Transferred</div><div class="ml-kpi-value amber" id="esc-transferred">—</div><div class="ml-kpi-sub">to other departments</div></div>
+      <div class="ml-kpi"><div class="ml-kpi-label">Total Delays Logged</div><div class="ml-kpi-value" id="esc-total">—</div><div class="ml-kpi-sub">last 30 days</div></div>
+    </div>
+
+    <div class="ml-section-label"><h2>Needs CEO Decision</h2></div>
+    <div id="esc-queue-body"></div>
+
+    <div class="ml-section-label" style="margin-top:24px"><h2>Delay Reason Breakdown — Where Are the Real Bottlenecks</h2></div>
+    <div class="ml-chart-card"><div class="ml-chart-title">Delay reasons across all sites (last 30 days)</div><canvas id="esc-reason-chart"></canvas></div>
+
+    <div class="ml-section-label" style="margin-top:24px"><h2>Full Delay Log</h2></div>
+    <div class="ml-card" style="overflow:hidden">
+      <table class="ml-tbl">
+        <thead><tr><th>Site</th><th>Location</th><th>Activity</th><th>Date</th><th>Reason</th><th>Verification</th><th>Transferred To</th></tr></thead>
+        <tbody id="esc-log"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- QUALITY FLAGS -->
@@ -494,7 +519,7 @@ function stab(id, el) {
 
 let SITES = [];
 
-let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[];
+let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[], allDelays=[];
 let matC1=null,matC2=null,qaC=null,sfC=null,hsC1=null,hsC2=null,hsC3=null,hsC4=null;
 
 document.addEventListener('DOMContentLoaded', async ()=>{
@@ -519,14 +544,15 @@ async function loadAll() {
   loadBar(10);
   try {
     const today = todayStr();
-    const [flR, matR, qaR, sfR, schR, milR, revR] = await Promise.all([
+    const [flR, matR, qaR, sfR, schR, milR, revR, delR] = await Promise.all([
       apiGet('allFloors',{days:30}),
       apiGet('allMaterials',{days:7}),
       apiGet('allQuality',{days:30}),
       apiGet('allSafety',{days:30}),
       apiGet('allSchedule'),
       apiGet('allMilestones'),
-      apiGet('allReviews')
+      apiGet('allReviews'),
+      apiGet('allDelays')
     ]);
     loadBar(70);
     allFloors  = flR.ok  ? flR.data  : [];
@@ -536,15 +562,24 @@ async function loadAll() {
     allSchedule= schR.ok ? schR.data : [];
     allMilestones = milR.ok ? milR.data : [];
     allReviews = revR.ok ? revR.data : [];
+    allDelays = delR.ok ? delR.data : [];
     loadBar(100);
     document.getElementById('last-refresh').textContent = 'Last refresh: '+new Date().toLocaleTimeString('en-IN');
     renderPortfolio();
     renderTimeline();
+    updateEscBadge();
     setTimeout(()=>loadBar(0),800);
   } catch(e) {
     toast('Data load failed: '+e.message,'err');
     loadBar(0);
   }
+}
+
+function updateEscBadge() {
+  const needsReview = allDelays.filter(d => d.escalationStatus === 'awaiting_ceo' || d.verificationStatus === 'unverified');
+  const badge = document.getElementById('esc-badge');
+  if (needsReview.length > 0) { badge.textContent = needsReview.length; badge.style.display = 'inline'; }
+  else badge.style.display = 'none';
 }
 
 // ── PORTFOLIO ─────────────────────────────────────────────────────────────────
@@ -704,6 +739,101 @@ function renderTimeline() {
       milBody.appendChild(div);
     });
   }
+}
+
+// ── DELAY ESCALATIONS ────────────────────────────────────────────────────────
+let escChart = null;
+
+function renderEscalations() {
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  const recent = allDelays.filter(d => new Date(d.date) >= cutoff);
+
+  const needsReview = allDelays.filter(d => d.escalationStatus === 'awaiting_ceo' || d.verificationStatus === 'unverified');
+  const verified = recent.filter(d => d.verificationStatus === 'verified');
+  const transferred = recent.filter(d => d.escalationStatus === 'transferred');
+
+  document.getElementById('esc-pending').textContent = needsReview.length;
+  document.getElementById('esc-verified').textContent = verified.length;
+  document.getElementById('esc-transferred').textContent = transferred.length;
+  document.getElementById('esc-total').textContent = recent.length;
+
+  // Queue of items needing CEO decision
+  const queueBody = document.getElementById('esc-queue-body');
+  if (!needsReview.length) {
+    queueBody.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm);font-size:12px">Nothing needs your review right now.</div>';
+  } else {
+    queueBody.innerHTML = needsReview.slice().reverse().map(d => {
+      const statusColor = d.verificationStatus === 'unverified' ? 'var(--danger)' : 'var(--rag-a)';
+      const statusLabel = d.verificationStatus === 'unverified' ? 'UNVERIFIED — claim does not match records' : 'CANNOT AUTO-VERIFY — needs your judgment';
+      return `<div class="ml-card" style="margin-bottom:12px">
+        <div class="ml-card-hdr">
+          <div class="ml-card-hdr-icon">🚨</div>
+          <h3>${d.building} — ${d.floor}</h3>
+          <span>${d.activity} · ${d.site} · ${d.date}</span>
+          <span style="margin-left:auto;font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${statusColor}22;color:${statusColor}">${statusLabel}</span>
+        </div>
+        <div class="ml-card-body">
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div><div style="font-size:9px;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Reason Claimed</div><strong>${d.delayReason}</strong></div>
+            <div><div style="font-size:9px;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Planned End</div><strong>${d.plannedEnd||'—'}</strong></div>
+            <div><div style="font-size:9px;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Submitted By</div><strong>${d.submittedBy}</strong></div>
+          </div>
+          <div style="font-size:12px;color:var(--charcoal);margin-bottom:10px;padding:10px;background:var(--cream);border-radius:2px;border:1px solid var(--border)">
+            <strong>PM's explanation:</strong> ${d.delayDetail || 'No additional detail provided'}
+          </div>
+          <div style="font-size:11px;color:var(--warm);margin-bottom:14px"><strong>System check:</strong> ${d.verificationNote}</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="esc-note-${d.itemKey.replace(/[^a-z0-9]/gi,'_')}" placeholder="Optional note (e.g. spoke to PM, confirmed valid)" style="flex:1;border:1px solid var(--border);border-radius:2px;padding:8px 11px;font-family:'Jost',sans-serif;font-size:12px;background:var(--cream)"/>
+            <button onclick="resolveEsc('${d.itemKey}')" style="background:var(--charcoal-dark);color:#fff;border:none;border-radius:2px;padding:9px 20px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Mark Reviewed</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Reason breakdown chart
+  const reasonCounts = {};
+  recent.forEach(d => { reasonCounts[d.delayReason] = (reasonCounts[d.delayReason]||0) + 1; });
+  const labels = Object.keys(reasonCounts);
+  const counts = labels.map(l => reasonCounts[l]);
+  if (escChart) escChart.destroy();
+  escChart = new Chart(document.getElementById('esc-reason-chart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: counts, backgroundColor: '#cc2a2aaa', borderColor: '#cc2a2a', borderWidth: 1.5 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+  });
+
+  // Full log
+  const log = document.getElementById('esc-log');
+  const sorted = [...allDelays].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  log.innerHTML = sorted.slice(0, 300).map(d => {
+    const vColor = d.verificationStatus === 'verified' ? 'var(--ok)' : d.verificationStatus === 'unverified' ? 'var(--danger)' : 'var(--rag-a)';
+    return `<tr>
+      <td><strong>${d.site}</strong></td>
+      <td>${d.building} — ${d.floor}</td>
+      <td>${d.activity}</td>
+      <td>${d.date}</td>
+      <td>${d.delayReason}</td>
+      <td><span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${vColor}22;color:${vColor}">${d.verificationStatus}</span></td>
+      <td style="font-size:11px;color:var(--warm)">${d.transferredTo||'—'}</td>
+    </tr>`;
+  }).join('');
+  if (!sorted.length) log.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--warm)">No delays logged yet</td></tr>';
+}
+
+async function resolveEsc(itemKey) {
+  const noteInput = document.getElementById('esc-note-' + itemKey.replace(/[^a-z0-9]/gi,'_'));
+  const note = noteInput ? noteInput.value : '';
+  try {
+    const r = await apiCall('resolveEscalation', { itemKey, note });
+    if (!r.ok) throw new Error(r.error);
+    toast('✓ Marked reviewed','ok');
+    // Refresh delay data and re-render
+    const delR = await apiGet('allDelays');
+    allDelays = delR.ok ? delR.data : [];
+    updateEscBadge();
+    renderEscalations();
+  } catch(e) { toast(e.message,'err'); }
 }
 
 // ── QUALITY FLAGS ─────────────────────────────────────────────────────────────
