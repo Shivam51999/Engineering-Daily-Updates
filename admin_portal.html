@@ -461,6 +461,36 @@ canvas{max-height:220px}
       </div>
 
       <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📥</div><h3>Bulk Upload via Template</h3><span>Set milestones for ALL sites from one file</span></div>
+        <div class="ml-card-body">
+          <div style="font-size:11px;color:var(--warm);margin-bottom:14px;line-height:1.7">
+            <strong>Step 1:</strong> Download the CSV template → open in Excel / Google Sheets.<br>
+            <strong>Step 2:</strong> Fill one row per milestone. Columns: <code style="background:var(--cream-d);padding:1px 5px;border-radius:2px">site, title, targetDate, status, notes</code>. Dates as <strong>YYYY-MM-DD</strong> (DD/MM/YYYY also accepted). Status: Pending / In Progress / Completed / Delayed.<br>
+            <strong>Step 3:</strong> Upload — you'll see a preview with any errors before anything is saved. Existing milestones (same site + title) get updated; new ones get added. Nothing is deleted.
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button onclick="downloadMilTemplate()" style="background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--charcoal)">⬇️ Download Template (CSV)</button>
+            <input type="file" accept=".csv,text/csv" id="mil-upload-file" style="display:none" onchange="onMilTemplateUpload(this)"/>
+            <button onclick="document.getElementById('mil-upload-file').click()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.5px">⬆️ Upload Filled Template</button>
+            <span id="mil-upload-status" style="font-size:11px;color:var(--warm)"></span>
+          </div>
+          <div id="mil-preview-wrap" style="display:none;margin-top:16px">
+            <div style="font-size:11px;font-weight:600;color:var(--charcoal);margin-bottom:8px" id="mil-preview-summary"></div>
+            <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:2px">
+              <table class="ml-tbl">
+                <thead><tr><th></th><th>Site</th><th>Title</th><th>Target Date</th><th>Status</th><th>Notes</th><th>Issue</th></tr></thead>
+                <tbody id="mil-preview-tbody"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:12px;text-align:right">
+              <button onclick="cancelMilImport()" style="background:none;border:1px solid var(--border);border-radius:2px;padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--warm);margin-right:8px">Cancel</button>
+              <button id="mil-confirm-btn" onclick="confirmMilImport()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.5px">Confirm Import →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-card">
         <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📊</div><h3>Milestone Rows</h3></div>
         <div class="ml-card-body" style="padding:0">
           <table class="ml-tbl">
@@ -1128,6 +1158,138 @@ function fmtDateShort(d) {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}); }
   catch(e) { return d; }
+}
+
+// ── MILESTONE TEMPLATE DOWNLOAD / UPLOAD ──────────────────────
+function downloadMilTemplate() {
+  const sites = activeSitesCache.length ? activeSitesCache : ['Miraya','Starview'];
+  const rows = [
+    ['site','title','targetDate','status','notes'],
+    [sites[0], 'Basement slab complete', '2026-08-15', 'Pending', 'Example row — edit or delete'],
+    [sites[0], '5th floor slab', '2026-09-30', 'In Progress', ''],
+    [sites.length>1?sites[1]:sites[0], 'Sample flat handover', '2026-10-20', 'Pending', 'Delete these examples before uploading']
+  ];
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mangalam_milestones_template.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Template downloaded — fill it and upload back','ok');
+}
+
+// Minimal robust CSV parser: quoted fields, embedded commas/quotes, CRLF
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += ch;
+    } else {
+      if (ch === '"') inQ = true;
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (field !== '' || row.length) { row.push(field); rows.push(row); row = []; field = ''; }
+        if (ch === '\r' && text[i+1] === '\n') i++;
+      } else field += ch;
+    }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// Accept YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY (Excel often converts) → YYYY-MM-DD
+function normalizeDate(s) {
+  s = String(s||'').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  m = s.match(/^(\d{4})[\/](\d{1,2})[\/](\d{1,2})$/);
+  if (m) return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+  return null;
+}
+
+let milImportRows = [];
+
+function onMilTemplateUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      let text = reader.result;
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+      const rows = parseCSV(text).filter(r => r.some(cell => String(cell).trim()));
+      if (rows.length < 2) { toast('File has no data rows','err'); return; }
+      const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+      const col = name => hdr.indexOf(name);
+      if (col('site') === -1 || col('title') === -1 || col('targetdate') === -1) {
+        toast('Header row must contain: site, title, targetDate','err'); return;
+      }
+      const MIL_ST = ['Pending','In Progress','Completed','Delayed'];
+      milImportRows = rows.slice(1).map((r, i) => {
+        const site = String(r[col('site')]||'').trim();
+        const title = String(r[col('title')]||'').trim();
+        const rawDate = String(r[col('targetdate')]||'').trim();
+        const date = normalizeDate(rawDate);
+        let status = String(col('status')>-1 ? r[col('status')]||'' : '').trim();
+        const matched = MIL_ST.find(s => s.toLowerCase() === status.toLowerCase());
+        status = matched || 'Pending';
+        const notes = String(col('notes')>-1 ? r[col('notes')]||'' : '').trim();
+        let issue = '';
+        if (!site) issue = 'Missing site';
+        else if (!activeSitesCache.includes(site)) issue = 'Unknown site "' + site + '" — check spelling vs Manage Projects';
+        else if (!title) issue = 'Missing title';
+        else if (title.toLowerCase().includes('example') || (notes && notes.toLowerCase().includes('example'))) issue = 'Looks like a template example row';
+        else if (!date) issue = 'Bad date "' + rawDate + '" — use YYYY-MM-DD';
+        return {site, title, targetDate: date||rawDate, status, notes, issue, line: i+2};
+      });
+      renderMilPreview();
+    } catch(e) { toast('Could not read file: ' + e.message,'err'); }
+  };
+  reader.readAsText(file);
+  input.value = ''; // allow re-uploading same filename
+}
+
+function renderMilPreview() {
+  const valid = milImportRows.filter(r => !r.issue);
+  const bad = milImportRows.filter(r => r.issue);
+  document.getElementById('mil-preview-wrap').style.display = 'block';
+  document.getElementById('mil-preview-summary').innerHTML =
+    `<span style="color:var(--ok)">✓ ${valid.length} valid row(s) ready to import</span>` +
+    (bad.length ? ` · <span style="color:var(--danger)">✕ ${bad.length} row(s) will be SKIPPED (fix and re-upload to include them)</span>` : '');
+  document.getElementById('mil-preview-tbody').innerHTML = milImportRows.map(r => `<tr style="${r.issue?'background:var(--danger-bg)':''}">
+    <td>${r.issue ? '✕' : '✓'}</td>
+    <td>${r.site||'—'}</td><td>${r.title||'—'}</td><td>${r.targetDate||'—'}</td>
+    <td>${r.status}</td><td style="font-size:11px;color:var(--warm)">${r.notes||'—'}</td>
+    <td style="font-size:10px;color:var(--danger)">${r.issue ? 'Line '+r.line+': '+r.issue : ''}</td>
+  </tr>`).join('');
+  document.getElementById('mil-confirm-btn').disabled = valid.length === 0;
+  document.getElementById('mil-upload-status').textContent = '';
+}
+
+function cancelMilImport() {
+  milImportRows = [];
+  document.getElementById('mil-preview-wrap').style.display = 'none';
+}
+
+async function confirmMilImport() {
+  const valid = milImportRows.filter(r => !r.issue);
+  if (!valid.length) { toast('No valid rows to import','err'); return; }
+  const btn = document.getElementById('mil-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Importing...';
+  try {
+    const r = await apiCall('bulkMilestones', {rows: valid, updatedBy: user.username});
+    if (!r.ok) throw new Error(r.error || 'Import failed');
+    toast(`✓ Imported — ${r.added} added, ${r.updated} updated` + (r.errors&&r.errors.length ? ', '+r.errors.length+' server-side skips' : ''),'ok');
+    cancelMilImport();
+    if (document.getElementById('mil-site').value) loadExistingMilestones();
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false; btn.textContent = 'Confirm Import →';
 }
 
 // ── TARGET VS ACHIEVEMENT (deviation vs baseline) ─────────────
