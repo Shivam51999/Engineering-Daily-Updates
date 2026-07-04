@@ -259,6 +259,7 @@ canvas{max-height:220px}
 
   <div class="ml-tabs">
     <div class="ml-tab active" onclick="stab('entry',this)">📦 Daily Stock Entry</div>
+    <div class="ml-tab" onclick="stab('indents',this);loadIndents()">📋 Indent Queue <span id="ind-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
     <div class="ml-tab" onclick="stab('history',this);loadHist()">📈 Consumption History</div>
   </div>
 
@@ -310,6 +311,29 @@ canvas{max-height:220px}
       </div>
 
     </div>
+
+    <!-- INDENT QUEUE TAB -->
+    <div class="ml-tc" id="tab-indents">
+      <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--red)">
+        These are official material requests from your site's PM. Acknowledge each, then mark <strong>Fulfilled</strong> or <strong>Short</strong>. Unfulfilled timely indents count against Store's scorecard — late-raised indents (under 3 days lead) are marked and count against the PM instead.
+      </div>
+      <div class="ml-hist-ctrl">
+        <select id="ind-status-filter" onchange="loadIndents()">
+          <option value="">All Indents</option>
+          <option value="Pending">Pending</option>
+          <option value="Acknowledged">Acknowledged</option>
+          <option value="Fulfilled">Fulfilled</option>
+          <option value="Short">Short</option>
+        </select>
+        <button onclick="loadIndents()">↻ Refresh</button>
+      </div>
+      <div class="ml-card" style="overflow:hidden">
+        <table class="ml-tbl">
+          <thead><tr><th>Material</th><th>Qty</th><th>Building</th><th>Needed By</th><th>Lead Time</th><th>Raised By</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="ind-tbody"></tbody>
+        </table>
+      </div>
+    </div><!-- /tab-indents -->
 
     <div class="ml-tc" id="tab-history">
       <div class="ml-hist-ctrl">
@@ -474,6 +498,7 @@ function doLogout() {
 function showApp() {
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='flex';
+  setTimeout(loadIndents, 500);
   document.getElementById('hname').textContent=user.name||user.username;
   document.getElementById('hsite').textContent=user.site;
   document.getElementById('fsite').value=user.site;
@@ -542,6 +567,53 @@ async function doSubmit() {
     toast('✓ Stock submitted successfully','ok');
   } catch(e) { toast(e.message,'err'); }
   btn.disabled=false; btn.querySelector('span').textContent='Submit Daily Stock';
+}
+
+// ── INDENT QUEUE ──────────────────────────────────────────────
+async function loadIndents() {
+  const status = document.getElementById('ind-status-filter')?.value || '';
+  try {
+    const r = await apiGet('indentQueue', {site:user.site, status});
+    const all = r.ok ? r.data : [];
+    const pending = all.filter(x => x.status === 'Pending' || x.status === 'Acknowledged');
+    const badge = document.getElementById('ind-badge');
+    if (pending.length) { badge.textContent = pending.length; badge.style.display='inline'; }
+    else badge.style.display = 'none';
+
+    const tb = document.getElementById('ind-tbody');
+    if (!all.length) {
+      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--warm)">No indents yet</td></tr>';
+      return;
+    }
+    tb.innerHTML = all.slice().reverse().map(ind => {
+      const isTimely = ind.timely === 'TRUE';
+      const sColor = ind.status==='Fulfilled' ? 'var(--ok)' : ind.status==='Short' ? 'var(--danger)' : ind.status==='Acknowledged' ? 'var(--blue)' : 'var(--rag-a)';
+      const done = ['Fulfilled','Short'].includes(ind.status);
+      return `<tr>
+        <td><strong>${ind.material}</strong></td>
+        <td>${ind.qty} ${ind.unit}</td>
+        <td>${ind.building||'—'}</td>
+        <td>${ind.needBy||'—'}</td>
+        <td>${isTimely ? '<span class="chip chip-ok">Timely</span>' : '<span class="chip chip-danger" title="Raised with under 3 days lead — counts against PM">Late ask</span>'}</td>
+        <td style="font-size:11px">${ind.raisedBy}</td>
+        <td><span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${sColor}22;color:${sColor}">${ind.status}</span></td>
+        <td>${done ? '—' : `<div style="display:flex;gap:5px">
+          ${ind.status==='Pending' ? `<button onclick="updInd('${ind.indentId}','Acknowledged')" style="background:var(--blue);color:#fff;border:none;border-radius:2px;padding:5px 10px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer">Ack</button>` : ''}
+          <button onclick="updInd('${ind.indentId}','Fulfilled')" style="background:var(--ok);color:#fff;border:none;border-radius:2px;padding:5px 10px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer">Fulfilled</button>
+          <button onclick="updInd('${ind.indentId}','Short')" style="background:var(--danger);color:#fff;border:none;border-radius:2px;padding:5px 10px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer">Short</button>
+        </div>`}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { toast('Could not load indents: '+e.message,'err'); }
+}
+
+async function updInd(indentId, status) {
+  try {
+    const r = await apiCall('updateIndent', {indentId, status, ackBy:user.username});
+    if (!r.ok) throw new Error(r.error);
+    toast('✓ Indent marked ' + status,'ok');
+    loadIndents();
+  } catch(e) { toast(e.message,'err'); }
 }
 
 async function loadHist() {
