@@ -288,6 +288,10 @@ canvas{max-height:220px}
   <div class="ml-tabs">
     <div class="ml-tab active" onclick="stab('inspect',this)" id="tab-btn-inspect">📋 Inspection</div>
     <div class="ml-tab" onclick="stab('reviewqueue',this);loadReviewQueue()" id="tab-btn-review">🔔 PM Completions <span id="review-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
+    <div class="ml-tab" onclick="stab('raisencr',this);initNCRTab()">🚨 Raise NCR</div>
+    <div class="ml-tab" onclick="stab('myncrs',this);loadRaisedNCRs()">📂 My NCRs</div>
+    <div class="ml-tab" onclick="stab('raisencr',this);initNCRTab()">⚠️ Raise NCR</div>
+    <div class="ml-tab" onclick="stab('ncrlog',this);loadNCRLog()">📜 NCR Log</div>
   </div>
 
   <div class="ml-tc active" id="tab-inspect">
@@ -429,7 +433,155 @@ canvas{max-height:220px}
   </div><!-- /ml-main (inspection) -->
   </div><!-- /tab-inspect -->
 
+  <!-- RAISE NCR TAB -->
+  <div class="ml-tc" id="tab-raisencr">
+    <div class="ml-main">
+
+      <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--red)">
+        An NCR is a formal, on-the-record notice. The PM gets <strong>48 hours</strong> to Accept &amp; Rectify (photo proof) or Dispute (evidence → CEO/COO ruling). <strong>Critical</strong> severity freezes the activity in the PM portal immediately — use it for genuine stop-work situations only.
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">⚠️</div><h3>Raise Non-Conformance Report</h3><span>Formal policy violation notice</span></div>
+        <div class="ml-card-body">
+          <div class="ml-grid-3" style="margin-bottom:14px">
+            <div class="ml-field"><label>Site</label>
+              <select id="ncr-site" onchange="loadNCRBuildings()"><option value="">Select Site</option></select>
+            </div>
+            <div class="ml-field"><label>Building</label>
+              <select id="ncr-bld"><option value="">Select Building</option></select>
+            </div>
+            <div class="ml-field"><label>Floor / Level (optional)</label>
+              <input type="text" id="ncr-floor" placeholder="e.g. 3rd Floor"/>
+            </div>
+          </div>
+          <div class="ml-grid-3" style="margin-bottom:14px">
+            <div class="ml-field"><label>Activity (optional)</label>
+              <input type="text" id="ncr-activity" placeholder="e.g. Shuttering"/>
+            </div>
+            <div class="ml-field"><label>Severity</label>
+              <select id="ncr-severity" onchange="onNCRSeverityChange()">
+                <option>Minor</option><option>Major</option><option>Critical</option>
+              </select>
+            </div>
+            <div class="ml-field"><label>Policy / Clause Violated</label>
+              <input type="text" id="ncr-clause" placeholder="e.g. Safety SOP 4.2 — edge protection"/>
+            </div>
+          </div>
+          <div id="ncr-critical-warn" style="display:none;padding:10px 14px;background:var(--danger-bg);border-left:3px solid var(--danger);border-radius:2px;font-size:11px;color:var(--danger);margin-bottom:14px">
+            🛑 <strong>Critical = STOP WORK.</strong> The PM portal will freeze this activity immediately. The PM cannot log any progress on it until this NCR is rectified or overturned by CEO/COO.
+          </div>
+          <div class="ml-field" style="margin-bottom:14px"><label>Description of Non-Conformance</label>
+            <textarea id="ncr-desc" placeholder="What was observed, where, and why it violates policy..." style="min-height:80px"></textarea>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
+            <input type="file" accept="image/*" capture="environment" id="ncr-photo-input" style="display:none" onchange="onNCRPhotoSelected(this)"/>
+            <button type="button" class="gate-btn" id="ncr-photo-btn" onclick="document.getElementById('ncr-photo-input').click()">📸 Attach Evidence Photo</button>
+            <img id="ncr-photo-thumb" class="gate-thumb" style="display:none"/>
+            <span id="ncr-photo-status" style="font-size:11px;color:var(--warm)">Photo evidence strongly recommended</span>
+          </div>
+          <div style="text-align:right">
+            <button id="ncr-submit-btn" onclick="submitNCR()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:12px 32px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;position:relative;overflow:hidden">
+              <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+              Raise NCR →
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /tab-raisencr -->
+
+  <!-- NCR LOG TAB -->
+  <div class="ml-tc" id="tab-ncrlog">
+    <div class="ml-main">
+      <div class="ml-hist-ctrl">
+        <select id="ncrlog-site-filter" onchange="loadNCRLog()"><option value="">All Sites</option></select>
+        <button onclick="loadNCRLog()">↻ Refresh</button>
+      </div>
+      <div class="ml-card" style="overflow:hidden">
+        <table class="ml-tbl">
+          <thead><tr><th>Site</th><th>Location</th><th>Severity</th><th>Clause</th><th>Raised</th><th>Status</th><th>PM Response</th></tr></thead>
+          <tbody id="ncrlog-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /tab-ncrlog -->
+
   <!-- REVIEW QUEUE TAB -->
+  <!-- RAISE NCR TAB -->
+  <div class="ml-tc" id="tab-raisencr">
+    <div class="ml-main">
+      <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--red)">
+        An NCR is a formal, on-the-record violation notice. The PM gets <strong>48 hours</strong> to accept &amp; rectify (with photo proof) or dispute (with evidence — goes to CEO/COO). <strong>Critical</strong> severity freezes the activity in the PM portal until the NCR closes. Use it when policy is genuinely not being followed — it cannot be quietly ignored.
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🚨</div><h3>Raise Non-Conformance Report</h3></div>
+        <div class="ml-card-body">
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div class="ml-field"><label>Site</label>
+              <select id="ncr-site" onchange="loadNCRBuildings()"><option value="">Select Site</option></select>
+            </div>
+            <div class="ml-field"><label>Building</label>
+              <select id="ncr-bld" onchange="loadNCRFloors()"><option value="">Select Building</option></select>
+            </div>
+            <div class="ml-field"><label>Floor (optional)</label>
+              <select id="ncr-floor"><option value="">Site-wide / not floor-specific</option></select>
+            </div>
+          </div>
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div class="ml-field"><label>Activity (optional)</label>
+              <select id="ncr-activity"><option value="">Not activity-specific</option></select>
+            </div>
+            <div class="ml-field"><label>Severity</label>
+              <select id="ncr-severity">
+                <option value="Minor">Minor — note &amp; correct</option>
+                <option value="Major">Major — serious violation</option>
+                <option value="Critical">Critical — STOP WORK</option>
+              </select>
+            </div>
+            <div class="ml-field"><label>Policy / Clause Violated</label>
+              <input type="text" id="ncr-clause" placeholder="e.g. Safety SOP 4.2 — edge protection"/>
+            </div>
+          </div>
+          <div class="ml-field" style="margin-bottom:12px"><label>Description of Violation</label>
+            <textarea id="ncr-desc" placeholder="What exactly was observed, where, and why it violates policy" style="min-height:70px"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+            <input type="file" accept="image/*" capture="environment" id="ncr-photo-file" style="display:none" onchange="onNCRPhotoSelected(this)"/>
+            <button type="button" class="gate-btn" onclick="document.getElementById('ncr-photo-file').click()">📸 Attach Evidence Photo</button>
+            <span id="ncr-photo-status" style="font-size:11px;color:var(--ok);display:none">✓ Photo attached</span>
+          </div>
+          <div style="text-align:right">
+            <button id="ncr-submit-btn" onclick="submitNCR()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:12px 32px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;position:relative;overflow:hidden">
+              <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+              Raise NCR →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-raisencr -->
+
+  <!-- MY NCRS TAB -->
+  <div class="ml-tc" id="tab-myncrs">
+    <div class="ml-main">
+      <div class="ml-hist-ctrl">
+        <select id="myncr-status-filter" onchange="loadRaisedNCRs()">
+          <option value="">All NCRs</option>
+          <option value="Open">Open</option>
+          <option value="Unresponsive">Unresponsive (48h missed)</option>
+          <option value="Rectified">Rectified</option>
+          <option value="Disputed">Disputed</option>
+          <option value="Closed">Closed / Overturned</option>
+        </select>
+        <button onclick="loadRaisedNCRs()">↻ Refresh</button>
+      </div>
+      <div id="myncr-list"></div>
+    </div>
+  </div><!-- /tab-myncrs -->
+
   <div class="ml-tc" id="tab-reviewqueue">
     <div class="ml-main">
 
@@ -949,6 +1101,137 @@ async function doSubmit() {
     }, 1500);
   } catch(e) { toast(e.message, 'err'); }
   btn.disabled = false;
+}
+
+// ── RAISE NCR ──────────────────────────────────────────────────
+const NCR_ACTIVITIES = ['Shuttering','Rebar/Steel','Concreting','Deshuttering','Brickwork','Plaster','Tiles','Electrical','Plumbing','Painting','Waterproofing','Landscaping','Inspection','Housekeeping','Scaffolding','PPE Compliance','Other'];
+let ncrPhotoUrl = '';
+
+async function initNCRTab() {
+  // Populate site dropdown from the dynamic sites list already loaded
+  const siteSel = document.getElementById('ncr-site');
+  if (siteSel.options.length <= 1) {
+    try {
+      const r = await apiGet('sites', {});
+      const sites = r.ok ? r.data.map(s => s.site) : [];
+      siteSel.innerHTML = '<option value="">Select Site</option>' + sites.map(s => `<option>${s}</option>`).join('');
+    } catch(e) {}
+  }
+  const actSel = document.getElementById('ncr-activity');
+  if (actSel.options.length <= 1) {
+    actSel.innerHTML = '<option value="">Not activity-specific</option>' + NCR_ACTIVITIES.map(a => `<option>${a}</option>`).join('');
+  }
+}
+
+async function loadNCRBuildings() {
+  const site = document.getElementById('ncr-site').value;
+  const bldSel = document.getElementById('ncr-bld');
+  bldSel.innerHTML = '<option value="">Select Building</option>';
+  document.getElementById('ncr-floor').innerHTML = '<option value="">Site-wide / not floor-specific</option>';
+  if (!site) return;
+  try {
+    const r = await apiGet('buildings', {site});
+    (r.ok ? r.data : []).forEach(b => {
+      const n = b.building || b.name || '';
+      if (n) bldSel.insertAdjacentHTML('beforeend', `<option>${n}</option>`);
+    });
+  } catch(e) {}
+}
+
+async function loadNCRFloors() {
+  const site = document.getElementById('ncr-site').value;
+  const bld = document.getElementById('ncr-bld').value;
+  const flSel = document.getElementById('ncr-floor');
+  flSel.innerHTML = '<option value="">Site-wide / not floor-specific</option>';
+  if (!site || !bld) return;
+  try {
+    const r = await apiGet('schedule', {site, building: bld});
+    (r.ok && r.data ? r.data : []).forEach(row => {
+      if (row.floor) flSel.insertAdjacentHTML('beforeend', `<option>${row.floor}</option>`);
+    });
+  } catch(e) {}
+}
+
+async function onNCRPhotoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const site = document.getElementById('ncr-site').value || 'General';
+  try {
+    toast('Uploading evidence photo...','');
+    ncrPhotoUrl = await uploadFile(site, file, 'photo', 'ncr_evidence');
+    document.getElementById('ncr-photo-status').style.display = 'inline';
+    toast('Evidence photo uploaded','ok');
+  } catch(e) { toast('Upload failed: '+e.message,'err'); }
+}
+
+async function submitNCR() {
+  const site = document.getElementById('ncr-site').value;
+  const building = document.getElementById('ncr-bld').value;
+  const severity = document.getElementById('ncr-severity').value;
+  const desc = document.getElementById('ncr-desc').value.trim();
+  if (!site || !building) { toast('Select site and building','err'); return; }
+  if (!desc) { toast('Describe the violation','err'); return; }
+  if (!ncrPhotoUrl) { toast('Evidence photo is required — an NCR without proof is just an opinion','err'); return; }
+  if (severity === 'Critical' && !confirm('CRITICAL NCR = STOP WORK.\n\nThis will freeze the activity in the PM portal until the NCR is closed. Confirm?')) return;
+
+  const btn = document.getElementById('ncr-submit-btn');
+  btn.disabled = true;
+  try {
+    const r = await apiCall('raiseNCR', {
+      site, building,
+      floor: document.getElementById('ncr-floor').value,
+      activity: document.getElementById('ncr-activity').value,
+      severity,
+      policyClause: document.getElementById('ncr-clause').value.trim(),
+      description: desc,
+      photoUrl: ncrPhotoUrl,
+      raisedBy: user.username,
+      raisedByRole: user.role
+    });
+    if (!r.ok) throw new Error(r.error || 'Could not raise NCR');
+    toast(`✓ ${r.ncrId} raised — PM has 48h to respond`,'ok');
+    // Reset form
+    document.getElementById('ncr-desc').value = '';
+    document.getElementById('ncr-clause').value = '';
+    document.getElementById('ncr-photo-status').style.display = 'none';
+    ncrPhotoUrl = '';
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false;
+}
+
+// ── MY NCRS (raised by this inspector) ─────────────────────────
+async function loadRaisedNCRs() {
+  const status = document.getElementById('myncr-status-filter')?.value || '';
+  try {
+    const r = await apiGet('ncrQueue', {status});
+    const mine = (r.ok ? r.data : []).filter(n => n.raisedBy === user.username);
+    const list = document.getElementById('myncr-list');
+    if (!mine.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm);font-size:13px">No NCRs raised yet' + (status ? ' with this status' : '') + '.</div>';
+      return;
+    }
+    list.innerHTML = mine.slice().reverse().map(n => {
+      const sevColor = n.severity==='Critical' ? 'var(--danger)' : n.severity==='Major' ? 'var(--rag-a)' : 'var(--warm)';
+      const stColor = n.effectiveStatus==='Rectified' ? 'var(--ok)' : n.effectiveStatus==='Closed' ? 'var(--warm)' : n.effectiveStatus==='Unresponsive' ? 'var(--danger)' : n.effectiveStatus==='Disputed' ? 'var(--blue)' : 'var(--rag-a)';
+      return `<div class="ml-card" style="margin-bottom:12px">
+        <div class="ml-card-hdr">
+          <div class="ml-card-hdr-icon">🚨</div>
+          <h3>${n.ncrId}</h3>
+          <span>${n.site} · ${n.building} ${n.floor?'· '+n.floor:''} ${n.activity?'· '+n.activity:''}</span>
+          <span style="margin-left:auto;display:flex;gap:6px">
+            <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${sevColor}22;color:${sevColor}">${n.severity}</span>
+            <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${stColor}22;color:${stColor}">${n.effectiveStatus}</span>
+          </span>
+        </div>
+        <div class="ml-card-body">
+          <div style="font-size:12px;color:var(--charcoal);margin-bottom:8px">${n.description||'—'}</div>
+          ${n.pmResponse ? `<div style="font-size:11px;color:var(--warm);margin-bottom:6px"><strong>PM response:</strong> ${n.pmResponse}${n.disputeEvidence ? ' — "' + n.disputeEvidence + '"' : ''}</div>` : '<div style="font-size:11px;color:var(--warm)">Awaiting PM response</div>'}
+          ${n.rectPhotoUrl ? `<a href="${n.rectPhotoUrl}" target="_blank" style="font-size:11px;color:var(--blue)">View rectification photo</a>` : ''}
+          ${n.adjudicatedBy ? `<div style="font-size:11px;color:var(--charcoal);margin-top:6px;padding:8px;background:var(--cream);border-radius:2px"><strong>Ruling by ${n.adjudicatedBy}:</strong> ${n.adjudicationDecision === 'uphold' ? 'NCR upheld — PM must rectify' : 'NCR overturned'} ${n.adjudicationNote ? '· ' + n.adjudicationNote : ''}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast('Could not load NCRs: '+e.message,'err'); }
 }
 
 // ── REVIEW QUEUE — PM Completions awaiting Quality sign-off ─────
