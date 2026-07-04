@@ -273,6 +273,7 @@ canvas{max-height:220px}
     <div class="ml-tab" onclick="stab('flatschedule',this)">🏠 Flat Schedule</div>
     <div class="ml-tab" onclick="stab('milestones',this)">🏁 Milestones</div>
     <div class="ml-tab" onclick="stab('rfi',this);loadRFIQueue()">📝 RFI Queue <span id="rfi-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
+    <div class="ml-tab" onclick="stab('deviation',this);loadDeviation()">🎯 Target vs Achievement</div>
     <div class="ml-tab" onclick="stab('overview',this);loadOverview()">🔍 Timeline Overview</div>
   </div>
 
@@ -505,6 +506,38 @@ canvas{max-height:220px}
     </div><!-- /tab-rfi -->
 
     <!-- OVERVIEW TAB -->
+    <!-- TARGET VS ACHIEVEMENT TAB -->
+    <div class="ml-tc" id="tab-deviation">
+
+      <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--white);border-radius:2px;border-left:3px solid var(--red)">
+        Deviation is measured against the <strong>original baseline</strong> — the first schedule ever saved for each building. Revised targets don't reset the clock; every revision is logged with its reason and shown below.
+      </div>
+
+      <div class="ml-kpi-strip">
+        <div class="ml-kpi green"><div class="ml-kpi-label">On / Ahead of Target</div><div class="ml-kpi-value green" id="dev-ontrack">—</div><div class="ml-kpi-sub">floors</div></div>
+        <div class="ml-kpi amber"><div class="ml-kpi-label">Slipping (1–14 days)</div><div class="ml-kpi-value amber" id="dev-slipping">—</div><div class="ml-kpi-sub">floors</div></div>
+        <div class="ml-kpi red"><div class="ml-kpi-label">Breached (15+ days)</div><div class="ml-kpi-value red" id="dev-breached">—</div><div class="ml-kpi-sub">floors</div></div>
+        <div class="ml-kpi"><div class="ml-kpi-label">Target Revisions</div><div class="ml-kpi-value" id="dev-revisions">—</div><div class="ml-kpi-sub">goalpost moves logged</div></div>
+      </div>
+
+      <div class="ml-hist-ctrl">
+        <select id="dev-site" onchange="loadDeviation()"><option value="">All Sites</option></select>
+        <button onclick="loadDeviation()">↻ Refresh</button>
+      </div>
+
+      <div class="ml-section-label"><h2>Floor-by-Floor Deviation (vs Original Baseline)</h2></div>
+      <div id="dev-body"></div>
+
+      <div class="ml-section-label" style="margin-top:24px"><h2>Target Revision Log — Every Goalpost Move</h2></div>
+      <div class="ml-card" style="overflow:hidden">
+        <table class="ml-tbl">
+          <thead><tr><th>Site</th><th>Building</th><th>Floor</th><th>Field</th><th>Old → New</th><th>Reason</th><th>By</th><th>When</th></tr></thead>
+          <tbody id="dev-rev-tbody"></tbody>
+        </table>
+      </div>
+
+    </div><!-- /tab-deviation -->
+
     <div class="ml-tc" id="tab-overview">
       <div class="ml-kpi-strip" id="ov-kpis">
         <div class="ml-kpi green"><div class="ml-kpi-label">On Track</div><div class="ml-kpi-value green" id="ov-green">—</div><div class="ml-kpi-sub">floors</div></div>
@@ -849,7 +882,17 @@ async function saveSchedule() {
   if(!rows.length) { toast('Add at least one floor row','err'); return; }
   const btn=document.getElementById('sch-save-btn'); btn.disabled=true;
   try {
-    const r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username});
+    let r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username});
+    if(!r.ok && r.needsReason) {
+      // Targets already exist and something changed — a written reason is mandatory
+      const reason = prompt('⚠️ You are changing ' + r.changeCount + ' existing target(s).\n\nEvery revision is logged and visible to CEO/COO. Deviation stays measured against the ORIGINAL baseline.\n\nReason for revision (required):');
+      if (!reason || !reason.trim()) {
+        toast('Revision cancelled — no reason given','err');
+        btn.disabled=false;
+        return;
+      }
+      r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username,revisionReason:reason.trim()});
+    }
     if(!r.ok) throw new Error(r.error);
     toast(`✓ Schedule saved — ${rows.length} floors for ${bld}, ${site}`,'ok');
   } catch(e) { toast(e.message,'err'); }
@@ -1085,6 +1128,107 @@ function fmtDateShort(d) {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}); }
   catch(e) { return d; }
+}
+
+// ── TARGET VS ACHIEVEMENT (deviation vs baseline) ─────────────
+async function loadDeviation() {
+  // Populate site filter once
+  const siteSel = document.getElementById('dev-site');
+  if (siteSel.options.length <= 1 && activeSitesCache.length) {
+    siteSel.innerHTML = '<option value="">All Sites</option>' + activeSitesCache.map(s=>`<option>${s}</option>`).join('');
+  }
+  const siteFilter = siteSel.value;
+  try {
+    const [baseR, flR, revR] = await Promise.all([
+      apiGet('allBaseline', {}),
+      apiGet('allFloors', {days:365}),
+      apiGet('targetRevisions', {site: siteFilter})
+    ]);
+    let baseline = baseR.ok ? baseR.data : [];
+    const floors = flR.ok ? flR.data : [];
+    const revisions = revR.ok ? revR.data : [];
+    if (siteFilter) baseline = baseline.filter(b => b.site === siteFilter);
+
+    // Latest actual per site|building|floor
+    const latest = {};
+    floors.forEach(f => {
+      const k = f.site+'|'+f.building+'|'+f.floor;
+      if (!latest[k] || f.date > latest[k].date) latest[k] = f;
+    });
+
+    const today = todayStr();
+    let onTrack=0, slipping=0, breached=0;
+    const groups = {};
+    baseline.forEach(b => {
+      if (!b.plannedEnd) return;
+      const k = b.site+'|'+b.building+'|'+b.floor;
+      const act = latest[k];
+      const actualPct = act ? parseFloat(act.pct)||0 : 0;
+      const isDone = act && (act.status === 'Completed' || actualPct >= parseFloat(b.plannedPct||100));
+      // deviation days: if done, use completion date vs plannedEnd; else today vs plannedEnd (only if past)
+      let devDays = 0;
+      if (isDone) {
+        devDays = Math.round((new Date(act.date) - new Date(b.plannedEnd)) / 86400000);
+      } else if (today > b.plannedEnd) {
+        devDays = Math.round((new Date(today) - new Date(b.plannedEnd)) / 86400000);
+      }
+      let cls;
+      if (devDays <= 0) { cls='g'; onTrack++; }
+      else if (devDays <= 14) { cls='a'; slipping++; }
+      else { cls='r'; breached++; }
+      const gk = b.site+'|'+b.building;
+      if (!groups[gk]) groups[gk] = {site:b.site, building:b.building, rows:[]};
+      groups[gk].rows.push({floor:b.floor, plannedEnd:b.plannedEnd, plannedPct:b.plannedPct,
+                            actualPct, status: act ? act.status : 'No data', isDone, devDays, cls});
+    });
+
+    document.getElementById('dev-ontrack').textContent = onTrack;
+    document.getElementById('dev-slipping').textContent = slipping;
+    document.getElementById('dev-breached').textContent = breached;
+    document.getElementById('dev-revisions').textContent = revisions.length;
+
+    const body = document.getElementById('dev-body');
+    body.innerHTML = '';
+    const groupList = Object.values(groups);
+    if (!groupList.length) {
+      body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm);font-size:12px">No baselines yet. A baseline is created automatically the first time a schedule is saved for a building.</div>';
+    } else {
+      groupList.forEach(g => {
+        const worst = g.rows.some(r=>r.cls==='r') ? 'r' : g.rows.some(r=>r.cls==='a') ? 'a' : 'g';
+        const wc = worst==='r'?'var(--danger)':worst==='a'?'var(--rag-a)':'var(--ok)';
+        const div = document.createElement('div');
+        div.className = 'ml-card'; div.style.marginBottom='14px';
+        div.innerHTML = `<div class="site-group-hdr">${g.site} — ${g.building}
+            <span style="margin-left:auto;font-size:10px;color:${wc};font-weight:700">${worst==='g'?'ON TRACK':worst==='a'?'SLIPPING':'BREACHED'}</span></div>
+          <table class="ml-tbl">
+            <thead><tr><th>Floor</th><th>Baseline Target</th><th>Target %</th><th>Actual %</th><th>Status</th><th>Deviation</th></tr></thead>
+            <tbody>${g.rows.map(r => `<tr class="rag-row-${r.cls}">
+              <td><strong>${r.floor}</strong></td>
+              <td>${r.plannedEnd}</td>
+              <td>${r.plannedPct}%</td>
+              <td>${r.actualPct}%</td>
+              <td>${r.status}${r.isDone?' ✓':''}</td>
+              <td style="font-weight:700;color:${r.cls==='r'?'var(--danger)':r.cls==='a'?'var(--rag-a)':'var(--ok)'}">${r.devDays<=0 ? (r.isDone?'On time':'On track') : '+' + r.devDays + ' days late'}</td>
+            </tr>`).join('')}</tbody>
+          </table>`;
+        body.appendChild(div);
+      });
+    }
+
+    const revTb = document.getElementById('dev-rev-tbody');
+    if (!revisions.length) {
+      revTb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--warm)">No target revisions — goalposts have not moved. Good.</td></tr>';
+    } else {
+      revTb.innerHTML = revisions.slice().reverse().map(rv => `<tr>
+        <td><strong>${rv.site}</strong></td><td>${rv.building}</td><td>${rv.floor}</td>
+        <td>${rv.field}</td>
+        <td style="font-size:11px">${rv.oldValue} → <strong>${rv.newValue}</strong></td>
+        <td style="font-size:11px;color:var(--warm)">${rv.reason}</td>
+        <td>${rv.revisedBy}</td>
+        <td style="font-size:11px">${fmtDateShort(rv.revisedAt)}</td>
+      </tr>`).join('');
+    }
+  } catch(e) { toast('Could not load deviation data: '+e.message,'err'); }
 }
 
 // OVERVIEW
