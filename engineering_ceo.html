@@ -199,6 +199,7 @@ canvas{max-height:220px}
   .ml-nav{padding:0 18px;height:60px}
   .ml-nav-logo img{height:36px}
   .ml-page-band,.ml-tabs,.ml-main{padding-left:18px;padding-right:18px}
+  #brief-grid{grid-template-columns:1fr !important}
   .ml-grid-2,.ml-grid-3,.ml-grid-4{grid-template-columns:1fr}
   .ml-submit-bar{padding:10px 18px}
   .ml-grid-chart-2{grid-template-columns:1fr}
@@ -279,6 +280,20 @@ canvas{max-height:220px}
 
   <!-- PORTFOLIO -->
   <div class="ml-tc active" id="tab-portfolio">
+
+    <!-- INTELLIGENCE BRIEF -->
+    <div class="ml-section-label"><h2>🧠 Today's Brief — Where To Spend Your Attention</h2></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px" id="brief-grid">
+      <div class="ml-card" style="border-top:3px solid var(--danger)">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🔴</div><h3>Needs Your Focus</h3><span id="brief-focus-count"></span></div>
+        <div class="ml-card-body" id="brief-focus" style="padding:10px 16px"></div>
+      </div>
+      <div class="ml-card" style="border-top:3px solid var(--ok)">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🟢</div><h3>Going Well</h3><span id="brief-good-count"></span></div>
+        <div class="ml-card-body" id="brief-good" style="padding:10px 16px"></div>
+      </div>
+    </div>
+
     <div class="ml-kpi-strip" id="port-kpis">
       <div class="ml-kpi"><div class="ml-kpi-label">Sites Reporting</div><div class="ml-kpi-value" id="kpi-reporting">—</div><div class="ml-kpi-sub">of 9 today</div></div>
       <div class="ml-kpi"><div class="ml-kpi-label">Avg Completion</div><div class="ml-kpi-value" id="kpi-avg">—</div><div class="ml-kpi-sub">% across all floors</div></div>
@@ -556,7 +571,7 @@ function stab(id, el) {
 
 let SITES = [];
 
-let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[], allDelays=[], allWPlans=[], allInds=[], allNCRsData=[], allRFIs=[];
+let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[], allDelays=[], allWPlans=[], allInds=[], allNCRsData=[], allRFIs=[], allBaselines=[], allTargetRevs=[];
 let matC1=null,matC2=null,qaC=null,sfC=null,hsC1=null,hsC2=null,hsC3=null,hsC4=null;
 
 document.addEventListener('DOMContentLoaded', async ()=>{
@@ -581,7 +596,7 @@ async function loadAll() {
   loadBar(10);
   try {
     const today = todayStr();
-    const [flR, matR, qaR, sfR, schR, milR, revR, delR, wpR, indR, ncrR, rfiR] = await Promise.all([
+    const [flR, matR, qaR, sfR, schR, milR, revR, delR, wpR, indR, ncrR, rfiR, baseR, trevR] = await Promise.all([
       apiGet('allFloors',{days:90}),
       apiGet('allMaterials',{days:7}),
       apiGet('allQuality',{days:30}),
@@ -593,7 +608,9 @@ async function loadAll() {
       apiGet('allWeeklyPlans',{weeks:12}),
       apiGet('allIndents'),
       apiGet('allNCRs'),
-      apiGet('rfiQueue',{})
+      apiGet('rfiQueue',{}),
+      apiGet('allBaseline',{}),
+      apiGet('targetRevisions',{})
     ]);
     loadBar(70);
     allFloors  = flR.ok  ? flR.data  : [];
@@ -608,11 +625,14 @@ async function loadAll() {
     allInds = indR.ok ? indR.data : [];
     allNCRsData = ncrR.ok ? ncrR.data : [];
     allRFIs = rfiR.ok ? rfiR.data : [];
+    allBaselines = baseR.ok ? baseR.data : [];
+    allTargetRevs = trevR.ok ? trevR.data : [];
     loadBar(100);
     document.getElementById('last-refresh').textContent = 'Last refresh: '+new Date().toLocaleTimeString('en-IN');
     renderPortfolio();
     renderTimeline();
     updateEscBadge();
+    renderBrief();
     setTimeout(()=>loadBar(0),800);
   } catch(e) {
     toast('Data load failed: '+e.message,'err');
@@ -789,6 +809,121 @@ function renderTimeline() {
       milBody.appendChild(div);
     });
   }
+}
+
+// ── INTELLIGENCE BRIEF — rule engine for "focus here / this is fine" ─────────
+function briefLine(icon, text, detail, tabId) {
+  return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);cursor:${tabId?'pointer':'default'}" ${tabId?`onclick="document.querySelector('[onclick*=\\'${tabId}\\']').click()"`:''}>
+    <span style="font-size:13px;line-height:1.4">${icon}</span>
+    <div><div style="font-size:12px;color:var(--charcoal);font-weight:600;line-height:1.4">${text}</div>
+    ${detail?`<div style="font-size:10px;color:var(--warm);margin-top:1px">${detail}</div>`:''}</div>
+  </div>`;
+}
+
+function renderBrief() {
+  const focus = [];   // {priority, html}
+  const good = [];
+  const today = todayStr();
+  const monday = (() => { const d=new Date(); const day=d.getDay(); const diff=day===0?6:day-1; d.setDate(d.getDate()-diff); return d.toISOString().slice(0,10); })();
+
+  // ── 1. Weekly plan compliance (hard lock health)
+  const planSites = new Set(allWPlans.filter(p=>p.weekStart===monday).map(p=>p.site));
+  const noPlan = SITES.filter(s => !planSites.has(s));
+  if (noPlan.length) focus.push({pr:1, h:briefLine('🔒', noPlan.length + ' site(s) have NOT submitted this week\'s plan', noPlan.join(', ') + ' — their daily updates are locked; call the PM', 'league')});
+  else if (SITES.length) good.push(briefLine('🗓️', 'All ' + SITES.length + ' sites submitted weekly plans', 'The planning discipline is holding'));
+
+  // ── 2. Critical NCRs / stop-work
+  const critNCRs = allNCRsData.filter(n => n.severity==='Critical' && ['Open','Unresponsive','Disputed'].includes(n.effectiveStatus));
+  if (critNCRs.length) focus.push({pr:0, h:briefLine('🛑', critNCRs.length + ' CRITICAL NCR(s) — work stopped', critNCRs.map(n=>n.site+' '+n.building).join('; '), 'adjudication')});
+
+  // ── 3. Adjudication backlog
+  const adjQueue = allNCRsData.filter(n => ['Disputed','Unresponsive'].includes(n.effectiveStatus));
+  if (adjQueue.length) focus.push({pr:1, h:briefLine('⚖️', adjQueue.length + ' NCR(s) awaiting your ruling', adjQueue.filter(n=>n.effectiveStatus==='Unresponsive').length + ' unresponsive PMs among them', 'adjudication')});
+
+  // ── 4. Unverified excuses (integrity signal)
+  const unver = allDelays.filter(d => d.verificationStatus === 'unverified');
+  const unverBySite = {};
+  unver.forEach(d => unverBySite[d.site] = (unverBySite[d.site]||0)+1);
+  const repeatOffenders = Object.entries(unverBySite).filter(([s,n]) => n >= 3);
+  if (repeatOffenders.length) focus.push({pr:1, h:briefLine('🎭', 'Excuse pattern: ' + repeatOffenders.map(([s,n])=>s+' ('+n+' unverified claims)').join(', '), 'Claims that don\'t match records — worth a direct conversation', 'escalations')});
+  else if (allDelays.length && unver.length === 0) good.push(briefLine('✅', 'Every delay claim this period checked out against records', 'No one is gaming the system'));
+
+  // ── 5. Store performance
+  const timely = allInds.filter(x => x.timely === 'TRUE');
+  const overdueInds = timely.filter(x => !['Fulfilled'].includes(x.status) && x.needBy && x.needBy < today);
+  if (overdueInds.length) focus.push({pr:2, h:briefLine('📦', overdueInds.length + ' timely indent(s) past need-by date, unfulfilled', 'Store is now the verified bottleneck for: ' + [...new Set(overdueInds.map(x=>x.site))].join(', '), 'league')});
+  const fulfilledPct = timely.length ? Math.round(timely.filter(x=>x.status==='Fulfilled').length/timely.length*100) : null;
+  if (fulfilledPct !== null && fulfilledPct >= 90) good.push(briefLine('📦', 'Store fulfilment at ' + fulfilledPct + '%', 'Material excuses should be near zero'));
+
+  // ── 6. Schedule deviation vs baseline
+  if (allBaselines.length) {
+    const latest = {};
+    allFloors.forEach(f => { const k=f.site+'|'+f.building+'|'+f.floor; if(!latest[k]||f.date>latest[k].date) latest[k]=f; });
+    let breached = [], onTrackSites = new Set(), siteHasIssue = {};
+    allBaselines.forEach(b => {
+      if (!b.plannedEnd) return;
+      const act = latest[b.site+'|'+b.building+'|'+b.floor];
+      const done = act && (act.status==='Completed' || (parseFloat(act.pct)||0) >= parseFloat(b.plannedPct||100));
+      if (!done && today > b.plannedEnd) {
+        const days = Math.round((new Date(today)-new Date(b.plannedEnd))/86400000);
+        if (days >= 15) { breached.push({site:b.site, building:b.building, floor:b.floor, days}); siteHasIssue[b.site]=true; }
+      }
+    });
+    if (breached.length) {
+      breached.sort((a,b)=>b.days-a.days);
+      const worst = breached.slice(0,3).map(x=>x.site+' '+x.building+' '+x.floor+' (+'+x.days+'d)').join('; ');
+      focus.push({pr:1, h:briefLine('📉', breached.length + ' floor(s) breached baseline by 15+ days', 'Worst: ' + worst, null)});
+    }
+    SITES.forEach(s => { if (allBaselines.some(b=>b.site===s) && !siteHasIssue[s]) onTrackSites.add(s); });
+    if (onTrackSites.size) good.push(briefLine('🎯', [...onTrackSites].length + ' site(s) fully on baseline', [...onTrackSites].join(', ')));
+  }
+
+  // ── 7. Goalpost integrity
+  const cutoff30 = new Date(); cutoff30.setDate(cutoff30.getDate()-30);
+  const recentRevs = allTargetRevs.filter(r => new Date(r.revisedAt) >= cutoff30);
+  if (recentRevs.length >= 5) focus.push({pr:2, h:briefLine('🥅', recentRevs.length + ' target revisions in 30 days', 'Goalposts are moving — check the revision log reasons in Admin portal', null)});
+  else if (allBaselines.length && recentRevs.length === 0) good.push(briefLine('🥅', 'Zero target revisions in 30 days', 'Baselines are being respected'));
+
+  // ── 8. Sites not reporting
+  const reportedToday = new Set(allFloors.filter(f=>f.date===today).map(f=>f.site));
+  const twoDaysAgo = (()=>{const d=new Date(); d.setDate(d.getDate()-2); return d.toISOString().slice(0,10);})();
+  const silent = SITES.filter(s => !allFloors.some(f => f.site===s && f.date >= twoDaysAgo));
+  if (silent.length) focus.push({pr:2, h:briefLine('📵', silent.length + ' site(s) silent for 2+ days', silent.join(', '), null)});
+
+  // ── 9. Quality red flags & repeat errors
+  const cutoff7 = new Date(); cutoff7.setDate(cutoff7.getDate()-7);
+  const redFlags = allReviews.filter(r => r.flag==='red' && new Date(r.date) >= cutoff7);
+  const repeats = allReviews.filter(r => (r.repetitiveError==='TRUE'||r.repetitiveError===true) && new Date(r.date) >= cutoff7);
+  if (redFlags.length) focus.push({pr:2, h:briefLine('🚩', redFlags.length + ' Red quality flag(s) this week', [...new Set(redFlags.map(r=>r.site))].join(', ') + (repeats.length ? ' · ' + repeats.length + ' marked repetitive' : ''), 'qualityflags')});
+  else if (allReviews.some(r => new Date(r.date) >= cutoff7)) good.push(briefLine('🚩', 'No Red quality flags this week', 'Quality reviews passing'));
+
+  // ── 10. PPC leaders (recognition matters as much as pressure)
+  const cutoffW = new Date(); cutoffW.setDate(cutoffW.getDate()-28);
+  const recentPlans = allWPlans.filter(p => new Date(p.weekStart) >= cutoffW);
+  if (recentPlans.length) {
+    const bySite = {};
+    recentPlans.forEach(p => {
+      if (!bySite[p.site]) bySite[p.site] = {c:0, d:0};
+      bySite[p.site].c++;
+      const wEnd = new Date(p.weekStart); wEnd.setDate(wEnd.getDate()+7);
+      const wEndStr = wEnd.toISOString().slice(0,10);
+      if (allFloors.some(f => f.site===p.site && f.building===p.building && f.floor===p.floor && f.activity===p.activity && f.date>=p.weekStart && f.date<wEndStr && (f.status==='Completed'||(parseFloat(f.pct)||0)>=parseFloat(p.targetPct||100)))) bySite[p.site].d++;
+    });
+    const scored = Object.entries(bySite).filter(([s,x])=>x.c>=3).map(([s,x])=>({site:s, ppc:Math.round(x.d/x.c*100)}));
+    const stars = scored.filter(x=>x.ppc>=85).sort((a,b)=>b.ppc-a.ppc);
+    const laggards = scored.filter(x=>x.ppc<60).sort((a,b)=>a.ppc-b.ppc);
+    if (stars.length) good.push(briefLine('🏆', 'Delivering on commitments: ' + stars.map(x=>x.site+' ('+x.ppc+'%)').join(', '), 'Worth a public shout-out — recognition is cheaper than attrition'));
+    if (laggards.length) focus.push({pr:1, h:briefLine('📊', 'PPC below 60%: ' + laggards.map(x=>x.site+' ('+x.ppc+'%)').join(', '), 'Committing and not delivering — review their weekly plans with them', 'league')});
+  }
+
+  // Render, priority-sorted
+  focus.sort((a,b)=>a.pr-b.pr);
+  const focusEl = document.getElementById('brief-focus');
+  const goodEl = document.getElementById('brief-good');
+  focusEl.innerHTML = focus.length ? focus.map(f=>f.h).join('') : '<div style="padding:14px;font-size:12px;color:var(--warm)">Nothing urgent. Rare — enjoy it.</div>';
+  goodEl.innerHTML = good.length ? good.join('') : '<div style="padding:14px;font-size:12px;color:var(--warm)">Not enough data yet to celebrate anything.</div>';
+  document.getElementById('brief-focus-count').textContent = focus.length + ' item(s)';
+  document.getElementById('brief-good-count').textContent = good.length + ' item(s)';
 }
 
 // ── PM LEAGUE TABLE & DEPT SCORECARDS ───────────────────────────────────────
