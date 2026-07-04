@@ -286,15 +286,73 @@ canvas{max-height:220px}
   </div>
 
   <div class="ml-tabs">
-    <div class="ml-tab active" onclick="stab('entry',this)">📋 Daily Update</div>
+    <div class="ml-tab active" onclick="stab('weekplan',this);initWeekPlanTab()">🗓️ Weekly Plan <span id="wp-lock-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">!</span></div>
+    <div class="ml-tab" onclick="tryOpenEntry(this)">📋 Daily Update</div>
+    <div class="ml-tab" onclick="stab('ncr',this);loadMyNCRs()">⚠️ NCRs <span id="ncr-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
     <div class="ml-tab" onclick="stab('flats',this);initFlatsTab()">🏠 Flat-wise Status</div>
     <div class="ml-tab" onclick="stab('history',this);loadHist()">📈 Site History</div>
   </div>
 
   <div class="ml-main">
 
+    <!-- WEEKLY PLAN TAB -->
+    <div class="ml-tc active" id="tab-weekplan">
+
+      <div id="wp-status-banner" style="margin-bottom:16px"></div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🗓️</div><h3>This Week's Commitment</h3><span id="wp-week-label"></span></div>
+        <div class="ml-card-body">
+          <div style="font-size:10px;color:var(--warm);margin-bottom:12px;padding:8px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--red)">
+            Commit what your team WILL complete this week. Declare material needs and dependencies NOW — a delay excuse later is only valid if you asked for what you needed in advance.
+          </div>
+          <div class="ml-field" style="max-width:280px;margin-bottom:14px"><label>Building</label>
+            <select id="wp-bld" onchange="loadWeekPlanForBld()"><option value="">Select Building</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-card" id="wp-items-card" style="display:none">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🎯</div><h3>Committed Activities</h3><span>What will be DONE by Sunday</span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Floor</th><th>Activity</th><th>Target %</th><th>Labour Committed</th><th>Dependency (design/approval)</th><th></th></tr></thead>
+            <tbody id="wp-items-tbody"></tbody>
+          </table>
+          <div style="padding:12px 14px"><button class="ml-add-row" onclick="addWpItemRow()">+ Add Committed Activity</button></div>
+        </div>
+      </div>
+
+      <div class="ml-card" id="wp-mats-card" style="display:none">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📦</div><h3>Material Needs This Week</h3><span>Each row becomes an official indent to Store</span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Material</th><th>Quantity</th><th>Unit</th><th>Needed By</th><th></th></tr></thead>
+            <tbody id="wp-mats-tbody"></tbody>
+          </table>
+          <div style="padding:12px 14px"><button class="ml-add-row" onclick="addWpMatRow()">+ Add Material Need</button></div>
+        </div>
+      </div>
+
+      <div id="wp-submit-row" style="display:none;margin-top:4px;text-align:right">
+        <button id="wp-submit-btn" onclick="submitWeekPlan()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:12px 32px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;position:relative;overflow:hidden">
+          <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+          Submit Weekly Commitment →
+        </button>
+      </div>
+
+    </div><!-- /tab-weekplan -->
+
+    <!-- NCR TAB -->
+    <div class="ml-tc" id="tab-ncr">
+      <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--red)">
+        You have <strong>48 hours</strong> to respond to each NCR: Accept &amp; Rectify (with photo proof) or Dispute (with written evidence). Missed deadlines auto-escalate to CEO/COO as "unresponsive". Critical NCRs freeze the activity until closed.
+      </div>
+      <div id="ncr-list"></div>
+    </div><!-- /tab-ncr -->
+
     <!-- ENTRY TAB -->
-    <div class="ml-tc active" id="tab-entry">
+    <div class="ml-tc" id="tab-entry">
 
       <div class="ml-card">
         <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📋</div><h3>Site Details</h3><span>Auto-filled from your login</span></div>
@@ -541,6 +599,8 @@ async function showApp() {
   document.getElementById('fname').value = user.name||user.username;
   document.getElementById('fdate').value = todayStr();
   await loadBuildings();
+  initWeekPlanTab();
+  loadMyNCRs();
 }
 
 function doLogout() {
@@ -587,10 +647,12 @@ async function selectBld(name) {
   // Step 2: Load today's already-submitted data for this building (if any)
   // Step 3: Pre-fill each floor row with today's saved values; blank if not submitted yet
   try {
-    const [schR, histR] = await Promise.all([
+    const [schR, histR, ncrR] = await Promise.all([
       apiGet('schedule', {site: user.site, building: name}),
-      apiGet('history',  {site: user.site, days: 7, building: name})
+      apiGet('history',  {site: user.site, days: 7, building: name}),
+      apiGet('openCriticalNCRs', {site: user.site, building: name})
     ]);
+    const frozenActivities = (ncrR.ok ? ncrR.data : []).map(n => (n.floor||'') + '|' + (n.activity||''));
 
     // Build floor list — from schedule if available, else use MASTER_FLOORS fallback
     const schFloors = (schR.ok && schR.data && schR.data.length)
@@ -636,6 +698,20 @@ async function selectBld(name) {
     document.getElementById('floor-card-sub').textContent =
       'Building: ' + name + ' — ' + schFloors.length + ' floors' +
       (filled ? ' · ' + filled + ' with previous activity' : ' · fill in today\'s progress');
+
+    // STOP-WORK: freeze cards whose floor+activity has an open Critical NCR
+    if (frozenActivities.length) {
+      document.querySelectorAll('#floor-cards .floor-card').forEach(card => {
+        const fl = card.querySelector('.fl-floor')?.value || '';
+        const act = card.querySelector('.fl-act')?.value || '';
+        if (frozenActivities.includes(fl + '|' + act) || frozenActivities.includes(fl + '|')) {
+          card.style.opacity = '0.55';
+          card.style.pointerEvents = 'none';
+          card.insertAdjacentHTML('afterbegin',
+            '<div style="background:var(--danger);color:#fff;padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:.5px">🛑 STOP WORK — Open Critical NCR on this activity. Resolve it in the NCRs tab before updating progress.</div>');
+        }
+      });
+    }
 
   } catch(e) {
     // Hard fallback — show master floor list blank
@@ -730,7 +806,7 @@ function floorCard(f) {
   </div>`;
 }
 
-const DELAY_REASONS = ['Material shortage','Labour shortage','Contractor unavailable','Drawing/design issue','Quality/Safety hold','Weather','Other'];
+const DELAY_REASONS = ['Material shortage','Labour shortage','Contractor unavailable','Drawing/design issue','Approval pending','Quality/Safety hold','Weather','Other'];
 
 function onFloorStatusChange(sel) {
   const card = sel.closest('.floor-card');
@@ -1185,6 +1261,232 @@ async function doFlatSubmit() {
   btn.disabled = false;
 }
 
+
+// ── WEEKLY COMMITMENT PLAN ────────────────────────────────────
+let weekPlanSubmitted = false;
+
+function tryOpenEntry(el) {
+  if (!weekPlanSubmitted) {
+    toast('Submit this week\'s plan first — Daily Update is locked until then','err');
+    stab('weekplan', document.querySelector('.ml-tab'));
+    return;
+  }
+  stab('entry', el);
+}
+
+async function checkWeekPlanLock() {
+  try {
+    const r = await apiGet('weeklyPlanStatus', {site: user.site});
+    weekPlanSubmitted = r.ok && r.submitted;
+    const badge = document.getElementById('wp-lock-badge');
+    badge.style.display = weekPlanSubmitted ? 'none' : 'inline';
+    const banner = document.getElementById('wp-status-banner');
+    if (weekPlanSubmitted) {
+      banner.innerHTML = `<div style="padding:12px 16px;background:var(--ok-bg);border-left:3px solid var(--ok);border-radius:2px;font-size:12px;color:var(--ok)">✓ Weekly plan submitted for week starting ${r.weekStart} (${r.itemCount} committed activities). Daily Update is unlocked.</div>`;
+    } else {
+      banner.innerHTML = `<div style="padding:12px 16px;background:var(--danger-bg);border-left:3px solid var(--danger);border-radius:2px;font-size:12px;color:var(--danger)"><strong>🔒 Daily Update is locked.</strong> Submit this week's commitment plan below to unlock it. Week starting: ${r.weekStart||'—'}</div>`;
+    }
+  } catch(e) { weekPlanSubmitted = false; }
+}
+
+function initWeekPlanTab() {
+  const sel = document.getElementById('wp-bld');
+  sel.innerHTML = '<option value="">Select Building</option>' +
+    buildings.map(b => { const n = b.building||b.name||''; return `<option value="${n}">${n}</option>`; }).join('');
+  const ws = getMonday();
+  document.getElementById('wp-week-label').textContent = 'Week starting ' + ws;
+  checkWeekPlanLock();
+}
+
+function getMonday() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  return d.toISOString().slice(0,10);
+}
+
+async function loadWeekPlanForBld() {
+  const bld = document.getElementById('wp-bld').value;
+  const show = bld ? 'block' : 'none';
+  document.getElementById('wp-items-card').style.display = show;
+  document.getElementById('wp-mats-card').style.display = show;
+  document.getElementById('wp-submit-row').style.display = show;
+  if (!bld) return;
+  document.getElementById('wp-items-tbody').innerHTML = '';
+  document.getElementById('wp-mats-tbody').innerHTML = '';
+  // Load floors for this building for the dropdown, and existing plan if resubmitting
+  try {
+    const [schR, planR] = await Promise.all([
+      apiGet('schedule', {site:user.site, building:bld}),
+      apiGet('weeklyPlan', {site:user.site, building:bld})
+    ]);
+    window._wpFloors = (schR.ok && schR.data && schR.data.length)
+      ? schR.data.map(r=>r.floor).filter(Boolean) : MASTER_FLOORS;
+    if (planR.ok && planR.data.length) {
+      planR.data.forEach(it => addWpItemRow(it));
+      toast('Existing plan loaded — edit and resubmit to update','');
+    } else {
+      addWpItemRow(); addWpItemRow();
+    }
+    addWpMatRow();
+  } catch(e) {
+    window._wpFloors = MASTER_FLOORS;
+    addWpItemRow();
+    addWpMatRow();
+  }
+}
+
+function addWpItemRow(it) {
+  it = it || {};
+  const floors = window._wpFloors || MASTER_FLOORS;
+  document.getElementById('wp-items-tbody').insertAdjacentHTML('beforeend', `<tr>
+    <td><select class="wpi-floor">${floors.map(f=>`<option${f===it.floor?' selected':''}>`+f+`</option>`).join('')}</select></td>
+    <td><select class="wpi-act">${FLOOR_ACTIVITIES.map(a=>`<option${a===it.activity?' selected':''}>`+a+`</option>`).join('')}</select></td>
+    <td><input type="number" min="1" max="100" value="${it.targetPct||100}" class="wpi-pct" style="width:60px"/></td>
+    <td><input type="number" min="0" value="${it.labourCommit||0}" class="wpi-labour" style="width:70px"/></td>
+    <td><input type="text" value="${it.dependencies||''}" class="wpi-dep" placeholder="e.g. Approval: fire NOC / RFI: beam detail" style="width:180px"/></td>
+    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px">✕</button></td>
+  </tr>`);
+}
+
+function addWpMatRow() {
+  document.getElementById('wp-mats-tbody').insertAdjacentHTML('beforeend', `<tr>
+    <td><input type="text" class="wpm-mat" placeholder="e.g. Cement (OPC 53)" style="width:170px"/></td>
+    <td><input type="number" min="0" class="wpm-qty" style="width:70px"/></td>
+    <td><input type="text" class="wpm-unit" placeholder="Bags" style="width:70px"/></td>
+    <td><input type="date" class="wpm-needby" style="width:130px"/></td>
+    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px">✕</button></td>
+  </tr>`);
+}
+
+async function submitWeekPlan() {
+  const bld = document.getElementById('wp-bld').value;
+  if (!bld) { toast('Select a building','err'); return; }
+  const items = Array.from(document.querySelectorAll('#wp-items-tbody tr')).map(tr => ({
+    floor: tr.querySelector('.wpi-floor').value,
+    activity: tr.querySelector('.wpi-act').value,
+    targetPct: parseFloat(tr.querySelector('.wpi-pct').value)||100,
+    labourCommit: parseInt(tr.querySelector('.wpi-labour').value)||0,
+    dependencies: tr.querySelector('.wpi-dep').value.trim()
+  })).filter(i => i.floor && i.activity);
+  if (!items.length) { toast('Commit at least one activity','err'); return; }
+  const materials = Array.from(document.querySelectorAll('#wp-mats-tbody tr')).map(tr => ({
+    material: tr.querySelector('.wpm-mat').value.trim(),
+    qty: tr.querySelector('.wpm-qty').value,
+    unit: tr.querySelector('.wpm-unit').value.trim(),
+    needBy: tr.querySelector('.wpm-needby').value
+  })).filter(m => m.material);
+  const btn = document.getElementById('wp-submit-btn');
+  btn.disabled = true;
+  try {
+    const r = await apiCall('submitWeeklyPlan', {site:user.site, building:bld, items, materials, submittedBy:user.username});
+    if (!r.ok) throw new Error(r.error||'Submission failed');
+    toast(`✓ Plan submitted — ${r.count} activities, ${r.indentsRaised} indents sent to Store`,'ok');
+    await checkWeekPlanLock();
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false;
+}
+
+// ── NCR RESPONSE ──────────────────────────────────────────────
+let myNCRs = [];
+
+async function loadMyNCRs() {
+  try {
+    const r = await apiGet('ncrQueue', {site:user.site});
+    myNCRs = (r.ok ? r.data : []).filter(n =>
+      ['Open','Unresponsive','Adjudicated-Uphold'].includes(n.effectiveStatus));
+    const badge = document.getElementById('ncr-badge');
+    if (myNCRs.length) { badge.textContent = myNCRs.length; badge.style.display='inline'; }
+    else badge.style.display = 'none';
+    renderMyNCRs();
+  } catch(e) { toast('Could not load NCRs: '+e.message,'err'); }
+}
+
+function ncrTimeLeft(deadline) {
+  if (!deadline) return '';
+  const ms = new Date(deadline) - new Date();
+  if (ms <= 0) return '<span style="color:var(--danger);font-weight:700">OVERDUE — escalated to CEO/COO</span>';
+  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  const color = h < 12 ? 'var(--danger)' : h < 24 ? 'var(--rag-a)' : 'var(--ok)';
+  return `<span style="color:${color};font-weight:700">${h}h ${m}m left to respond</span>`;
+}
+
+function renderMyNCRs() {
+  const list = document.getElementById('ncr-list');
+  if (!myNCRs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm);font-size:13px">No open NCRs. Keep it that way. 👍</div>';
+    return;
+  }
+  list.innerHTML = myNCRs.map((n, idx) => {
+    const sevColor = n.severity==='Critical' ? 'var(--danger)' : n.severity==='Major' ? 'var(--rag-a)' : 'var(--warm)';
+    const isUpheld = n.effectiveStatus === 'Adjudicated-Uphold';
+    return `<div class="ml-card" style="margin-bottom:12px;${n.severity==='Critical'?'border-left:4px solid var(--danger)':''}">
+      <div class="ml-card-hdr">
+        <div class="ml-card-hdr-icon">⚠️</div>
+        <h3>${n.building} — ${n.floor||'Site-wide'} ${n.activity ? '· '+n.activity : ''}</h3>
+        <span style="margin-left:auto;font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${sevColor}22;color:${sevColor}">${n.severity}${n.severity==='Critical'?' — STOP WORK':''}</span>
+      </div>
+      <div class="ml-card-body">
+        <div style="font-size:11px;margin-bottom:8px">${ncrTimeLeft(n.responseDeadline)}</div>
+        ${n.policyClause ? `<div style="font-size:10px;color:var(--warm);margin-bottom:6px">Policy: <strong>${n.policyClause}</strong></div>` : ''}
+        <div style="font-size:12px;color:var(--charcoal);margin-bottom:10px;padding:10px;background:var(--cream);border-radius:2px;border:1px solid var(--border)">${n.description||'—'}</div>
+        ${n.photoUrl ? `<a href="${n.photoUrl}" target="_blank"><img src="${n.photoUrl}" style="max-width:200px;border-radius:3px;border:1px solid var(--border);margin-bottom:10px"/></a>` : ''}
+        <div style="font-size:11px;color:var(--warm);margin-bottom:12px">Raised by <strong>${n.raisedBy}</strong> (${n.raisedByRole})</div>
+        ${isUpheld ? `<div style="padding:10px;background:var(--danger-bg);border-radius:2px;font-size:12px;color:var(--danger);margin-bottom:10px"><strong>CEO/COO upheld this NCR.</strong> ${n.adjudicationNote||''} You must now rectify with photo proof.</div>` : ''}
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <input type="file" accept="image/*" capture="environment" id="ncr-rect-file-${idx}" style="display:none" onchange="onNCRRectPhoto(${idx}, this)"/>
+            <button class="gate-btn" onclick="document.getElementById('ncr-rect-file-${idx}').click()">📸 Attach Rectification Photo</button>
+            <span id="ncr-rect-status-${idx}" style="font-size:11px;color:var(--ok);display:none">✓ Photo attached</span>
+            <button onclick="acceptNCR(${idx})" style="background:var(--ok);color:#fff;border:none;border-radius:2px;padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Accept &amp; Rectify</button>
+          </div>
+          ${!isUpheld ? `<div style="display:flex;gap:10px;align-items:flex-start">
+            <textarea id="ncr-dispute-${idx}" placeholder="Written evidence for dispute (required)" style="flex:1;min-height:50px;border:1px solid var(--border);border-radius:2px;padding:8px 11px;font-family:'Jost',sans-serif;font-size:12px;background:var(--cream)"></textarea>
+            <button onclick="disputeNCR(${idx})" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:2px;padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">Dispute → CEO/COO</button>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const ncrRectPhotos = {};
+
+async function onNCRRectPhoto(idx, input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    toast('Uploading photo...','');
+    const url = await uploadFile(user.site, file, 'photo', 'ncr_rect_' + myNCRs[idx].ncrId);
+    ncrRectPhotos[idx] = url;
+    document.getElementById('ncr-rect-status-' + idx).style.display = 'inline';
+    toast('Rectification photo uploaded','ok');
+  } catch(e) { toast('Upload failed: '+e.message,'err'); }
+}
+
+async function acceptNCR(idx) {
+  const n = myNCRs[idx];
+  if (!ncrRectPhotos[idx]) { toast('Attach a rectification photo first','err'); return; }
+  try {
+    const r = await apiCall('respondNCR', {ncrId:n.ncrId, response:'accept', rectPhotoUrl:ncrRectPhotos[idx]});
+    if (!r.ok) throw new Error(r.error);
+    toast('✓ NCR accepted and marked rectified','ok');
+    loadMyNCRs();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function disputeNCR(idx) {
+  const n = myNCRs[idx];
+  const evidence = document.getElementById('ncr-dispute-' + idx).value.trim();
+  if (!evidence) { toast('Written evidence is required to dispute','err'); return; }
+  try {
+    const r = await apiCall('respondNCR', {ncrId:n.ncrId, response:'dispute', disputeEvidence:evidence});
+    if (!r.ok) throw new Error(r.error);
+    toast('Dispute submitted — CEO/COO will adjudicate','ok');
+    loadMyNCRs();
+  } catch(e) { toast(e.message,'err'); }
+}
 
 async function loadHist() {
   const bld = document.getElementById('hbld')?.value||'';
