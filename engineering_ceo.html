@@ -261,6 +261,8 @@ canvas{max-height:220px}
 <div class="ml-tabs">
   <div class="ml-tab active" onclick="stab('portfolio',this)">🗂️ Portfolio</div>
   <div class="ml-tab" onclick="stab('timeline',this);renderTimeline()">📅 Timeline RAG</div>
+  <div class="ml-tab" onclick="stab('league',this);renderLeague()">🏆 League Table</div>
+  <div class="ml-tab" onclick="stab('adjudication',this);renderAdjudication()">⚖️ NCR Adjudication <span id="adj-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
   <div class="ml-tab" onclick="stab('escalations',this);renderEscalations()">🚨 Delay Escalations <span id="esc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
   <div class="ml-tab" onclick="stab('qualityflags',this);renderQualityFlags()">🚩 Quality Flags</div>
   <div class="ml-tab" onclick="stab('floors',this)">📐 Floor Progress</div>
@@ -300,6 +302,41 @@ canvas{max-height:220px}
     <!-- Milestones -->
     <div class="ml-section-label" style="margin-top:24px"><h2>Project Milestones</h2></div>
     <div id="mil-body"></div>
+  </div>
+
+  <!-- LEAGUE TABLE -->
+  <div class="ml-tc" id="tab-league">
+    <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--white);border-radius:2px;border-left:3px solid var(--red)">
+      <strong>PPC = Percent of Plan Completed</strong> — of the activities each PM committed to in their weekly plans, how many actually got done. Verified external delays (Store failed a timely indent, upheld design issue, etc.) are excluded from the PM's denominator and counted on the owning department's scorecard instead. No excuses — just the ledger.
+    </div>
+
+    <div class="ml-hist-ctrl">
+      <select id="lg-weeks"><option value="4">Last 4 weeks</option><option value="8" selected>Last 8 weeks</option><option value="12">Last 12 weeks</option></select>
+      <button onclick="renderLeague()">↻ Refresh</button>
+    </div>
+
+    <div class="ml-section-label"><h2>PM League Table</h2></div>
+    <div class="ml-card" style="overflow:hidden;margin-bottom:24px">
+      <table class="ml-tbl">
+        <thead><tr><th>#</th><th>Site / PM</th><th>PPC Score</th><th>Committed</th><th>Delivered</th><th>Excused (verified)</th><th>Unverified Excuses</th><th>Open NCRs</th></tr></thead>
+        <tbody id="lg-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="ml-section-label"><h2>Department Scorecards</h2></div>
+    <div class="ml-kpi-strip" id="lg-dept-kpis">
+      <div class="ml-kpi"><div class="ml-kpi-label">Store — Indent Fulfilment</div><div class="ml-kpi-value" id="lg-store-score">—</div><div class="ml-kpi-sub" id="lg-store-sub"></div></div>
+      <div class="ml-kpi"><div class="ml-kpi-label">Design — RFI Resolution</div><div class="ml-kpi-value" id="lg-design-score">—</div><div class="ml-kpi-sub" id="lg-design-sub"></div></div>
+      <div class="ml-kpi"><div class="ml-kpi-label">Quality/Safety — NCR Closure</div><div class="ml-kpi-value" id="lg-qs-score">—</div><div class="ml-kpi-sub" id="lg-qs-sub"></div></div>
+      <div class="ml-kpi"><div class="ml-kpi-label">Weekly Plan Compliance</div><div class="ml-kpi-value" id="lg-plan-score">—</div><div class="ml-kpi-sub">sites with current-week plan</div></div>
+    </div>
+  </div>
+
+  <!-- NCR ADJUDICATION -->
+  <div class="ml-tc" id="tab-adjudication">
+    <div id="adj-signin-bar" style="margin-bottom:16px"></div>
+    <div class="ml-section-label"><h2>Disputed &amp; Unresponsive NCRs — Your Ruling Needed</h2></div>
+    <div id="adj-queue-body"></div>
   </div>
 
   <!-- DELAY ESCALATIONS -->
@@ -519,7 +556,7 @@ function stab(id, el) {
 
 let SITES = [];
 
-let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[], allDelays=[];
+let allFloors=[], allMats=[], allQuality=[], allSafety=[], allSchedule=[], allMilestones=[], allReviews=[], allDelays=[], allWPlans=[], allInds=[], allNCRsData=[], allRFIs=[];
 let matC1=null,matC2=null,qaC=null,sfC=null,hsC1=null,hsC2=null,hsC3=null,hsC4=null;
 
 document.addEventListener('DOMContentLoaded', async ()=>{
@@ -544,15 +581,19 @@ async function loadAll() {
   loadBar(10);
   try {
     const today = todayStr();
-    const [flR, matR, qaR, sfR, schR, milR, revR, delR] = await Promise.all([
-      apiGet('allFloors',{days:30}),
+    const [flR, matR, qaR, sfR, schR, milR, revR, delR, wpR, indR, ncrR, rfiR] = await Promise.all([
+      apiGet('allFloors',{days:90}),
       apiGet('allMaterials',{days:7}),
       apiGet('allQuality',{days:30}),
       apiGet('allSafety',{days:30}),
       apiGet('allSchedule'),
       apiGet('allMilestones'),
       apiGet('allReviews'),
-      apiGet('allDelays')
+      apiGet('allDelays'),
+      apiGet('allWeeklyPlans',{weeks:12}),
+      apiGet('allIndents'),
+      apiGet('allNCRs'),
+      apiGet('rfiQueue',{})
     ]);
     loadBar(70);
     allFloors  = flR.ok  ? flR.data  : [];
@@ -563,6 +604,10 @@ async function loadAll() {
     allMilestones = milR.ok ? milR.data : [];
     allReviews = revR.ok ? revR.data : [];
     allDelays = delR.ok ? delR.data : [];
+    allWPlans = wpR.ok ? wpR.data : [];
+    allInds = indR.ok ? indR.data : [];
+    allNCRsData = ncrR.ok ? ncrR.data : [];
+    allRFIs = rfiR.ok ? rfiR.data : [];
     loadBar(100);
     document.getElementById('last-refresh').textContent = 'Last refresh: '+new Date().toLocaleTimeString('en-IN');
     renderPortfolio();
@@ -580,6 +625,11 @@ function updateEscBadge() {
   const badge = document.getElementById('esc-badge');
   if (needsReview.length > 0) { badge.textContent = needsReview.length; badge.style.display = 'inline'; }
   else badge.style.display = 'none';
+
+  const adjNeeded = allNCRsData.filter(n => ['Disputed','Unresponsive'].includes(n.effectiveStatus));
+  const adjBadge = document.getElementById('adj-badge');
+  if (adjNeeded.length > 0) { adjBadge.textContent = adjNeeded.length; adjBadge.style.display = 'inline'; }
+  else adjBadge.style.display = 'none';
 }
 
 // ── PORTFOLIO ─────────────────────────────────────────────────────────────────
@@ -739,6 +789,180 @@ function renderTimeline() {
       milBody.appendChild(div);
     });
   }
+}
+
+// ── PM LEAGUE TABLE & DEPT SCORECARDS ───────────────────────────────────────
+function renderLeague() {
+  const weeks = parseInt(document.getElementById('lg-weeks').value || 8);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - weeks*7);
+  const plans = allWPlans.filter(p => new Date(p.weekStart) >= cutoff);
+
+  // For each plan item, determine: delivered? excused (verified delay)? unverified excuse?
+  // Delivered = FloorProgress has this site/building/floor/activity Completed OR pct>=target
+  // within [weekStart, weekStart+7)
+  const rows = {};
+  plans.forEach(p => {
+    if (!rows[p.site]) rows[p.site] = {site:p.site, pm:p.submittedBy, committed:0, delivered:0, excused:0, unverified:0};
+    const r = rows[p.site];
+    r.committed++;
+    const wStart = p.weekStart;
+    const wEnd = new Date(p.weekStart); wEnd.setDate(wEnd.getDate()+7);
+    const wEndStr = wEnd.toISOString().slice(0,10);
+    const done = allFloors.some(f =>
+      f.site===p.site && f.building===p.building && f.floor===p.floor && f.activity===p.activity &&
+      f.date >= wStart && f.date < wEndStr &&
+      (f.status==='Completed' || parseFloat(f.pct||0) >= parseFloat(p.targetPct||100)));
+    if (done) { r.delivered++; return; }
+    const delay = allDelays.find(d =>
+      d.site===p.site && d.building===p.building && d.floor===p.floor && d.activity===p.activity &&
+      d.date >= wStart && d.date < wEndStr);
+    if (delay && delay.verificationStatus==='verified') r.excused++;
+    else if (delay) r.unverified++;
+  });
+
+  const openNCRsBySite = {};
+  allNCRsData.forEach(n => {
+    if (['Open','Unresponsive','Disputed','Adjudicated-Uphold'].includes(n.effectiveStatus)) {
+      openNCRsBySite[n.site] = (openNCRsBySite[n.site]||0) + 1;
+    }
+  });
+
+  const ranked = Object.values(rows).map(r => {
+    const denom = r.committed - r.excused;
+    r.ppc = denom > 0 ? Math.round((r.delivered / denom) * 100) : (r.committed ? 100 : 0);
+    r.openNCRs = openNCRsBySite[r.site] || 0;
+    return r;
+  }).sort((a,b) => b.ppc - a.ppc);
+
+  const tb = document.getElementById('lg-tbody');
+  if (!ranked.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--warm)">No weekly plans submitted yet — the league begins when the first plan lands.</td></tr>';
+  } else {
+    tb.innerHTML = ranked.map((r, i) => {
+      const ppcColor = r.ppc >= 80 ? 'var(--ok)' : r.ppc >= 60 ? 'var(--rag-a)' : 'var(--danger)';
+      const medal = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : (i+1);
+      return `<tr>
+        <td style="font-size:14px">${medal}</td>
+        <td><strong>${r.site}</strong><br><span style="font-size:10px;color:var(--warm)">${r.pm}</span></td>
+        <td><span style="font-size:16px;font-weight:700;color:${ppcColor}">${r.ppc}%</span></td>
+        <td>${r.committed}</td>
+        <td style="color:var(--ok);font-weight:600">${r.delivered}</td>
+        <td>${r.excused}</td>
+        <td style="color:${r.unverified?'var(--danger)':'var(--warm)'};font-weight:${r.unverified?'700':'400'}">${r.unverified}</td>
+        <td style="color:${r.openNCRs?'var(--danger)':'var(--warm)'};font-weight:${r.openNCRs?'700':'400'}">${r.openNCRs}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Department scorecards
+  const fulfilable = allInds.filter(x => x.timely === 'TRUE');
+  const fulfilled = fulfilable.filter(x => x.status === 'Fulfilled');
+  document.getElementById('lg-store-score').textContent = fulfilable.length ? Math.round(fulfilled.length/fulfilable.length*100) + '%' : '—';
+  document.getElementById('lg-store-sub').textContent = fulfilled.length + ' of ' + fulfilable.length + ' timely indents fulfilled';
+
+  const resolvedRFIs = allRFIs.filter(x => x.status === 'Resolved');
+  document.getElementById('lg-design-score').textContent = allRFIs.length ? Math.round(resolvedRFIs.length/allRFIs.length*100) + '%' : '—';
+  document.getElementById('lg-design-sub').textContent = resolvedRFIs.length + ' of ' + allRFIs.length + ' RFIs resolved';
+
+  const closedNCRs = allNCRsData.filter(n => ['Rectified','Closed'].includes(n.status));
+  document.getElementById('lg-qs-score').textContent = allNCRsData.length ? Math.round(closedNCRs.length/allNCRsData.length*100) + '%' : '—';
+  document.getElementById('lg-qs-sub').textContent = closedNCRs.length + ' of ' + allNCRsData.length + ' NCRs closed';
+
+  const thisWeekPlans = new Set(allWPlans.filter(p => {
+    const monday = (() => { const d=new Date(); const day=d.getDay(); const diff=day===0?6:day-1; d.setDate(d.getDate()-diff); return d.toISOString().slice(0,10); })();
+    return p.weekStart === monday;
+  }).map(p => p.site));
+  document.getElementById('lg-plan-score').textContent = thisWeekPlans.size + '/' + SITES.length;
+}
+
+// ── NCR ADJUDICATION (CEO/COO ruling) ───────────────────────────────────────
+const ADJ_SK = 'ml_eng_adj';
+let adjudicator = null;
+
+function renderAdjudication() {
+  adjudicator = JSON.parse(sessionStorage.getItem(ADJ_SK) || 'null');
+  const bar = document.getElementById('adj-signin-bar');
+  if (!adjudicator) {
+    bar.innerHTML = `<div style="padding:14px 16px;background:var(--white);border-left:3px solid var(--rag-a);border-radius:2px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--charcoal)"><strong>Sign in to adjudicate</strong> (CEO or COO credentials):</span>
+      <input type="text" id="adj-user" placeholder="Username" style="border:1px solid var(--border);border-radius:2px;padding:8px 11px;font-family:'Jost',sans-serif;font-size:12px"/>
+      <input type="password" id="adj-pass" placeholder="Password" style="border:1px solid var(--border);border-radius:2px;padding:8px 11px;font-family:'Jost',sans-serif;font-size:12px"/>
+      <button onclick="adjSignIn()" style="background:var(--charcoal-dark);color:#fff;border:none;border-radius:2px;padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Sign In</button>
+    </div>`;
+  } else {
+    bar.innerHTML = `<div style="padding:10px 16px;background:var(--white);border-left:3px solid var(--ok);border-radius:2px;font-size:12px;color:var(--charcoal)">⚖️ Adjudicating as <strong>${adjudicator.username}</strong> (${adjudicator.role.toUpperCase()}) <button onclick="sessionStorage.removeItem(ADJ_SK);renderAdjudication()" style="background:none;border:none;color:var(--warm);cursor:pointer;font-size:11px;margin-left:8px;text-decoration:underline">sign out</button></div>`;
+  }
+
+  const queue = allNCRsData.filter(n => ['Disputed','Unresponsive'].includes(n.effectiveStatus));
+  const body = document.getElementById('adj-queue-body');
+  if (!queue.length) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm);font-size:13px">No disputes or unresponsive NCRs. The system is settling things on its own.</div>';
+    return;
+  }
+  body.innerHTML = queue.map((n, idx) => {
+    const isDispute = n.effectiveStatus === 'Disputed';
+    const sevColor = n.severity==='Critical' ? 'var(--danger)' : n.severity==='Major' ? 'var(--rag-a)' : 'var(--warm)';
+    return `<div class="ml-card" style="margin-bottom:14px">
+      <div class="ml-card-hdr">
+        <div class="ml-card-hdr-icon">⚖️</div>
+        <h3>${n.ncrId} — ${isDispute ? 'DISPUTED by PM' : 'PM UNRESPONSIVE (48h missed)'}</h3>
+        <span>${n.site} · ${n.building} ${n.floor?'· '+n.floor:''} ${n.activity?'· '+n.activity:''}</span>
+        <span style="margin-left:auto;font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${sevColor}22;color:${sevColor}">${n.severity}</span>
+      </div>
+      <div class="ml-card-body">
+        <div class="ml-grid-2" style="margin-bottom:12px">
+          <div style="padding:10px;background:var(--cream);border-radius:2px;border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">${n.raisedByRole||'Inspector'} — ${n.raisedBy} says:</div>
+            <div style="font-size:12px">${n.description||'—'} ${n.policyClause ? '<br><em>Policy: '+n.policyClause+'</em>' : ''}</div>
+            ${n.photoUrl ? `<a href="${n.photoUrl}" target="_blank" style="font-size:11px;color:var(--blue)">View evidence photo</a>` : ''}
+          </div>
+          <div style="padding:10px;background:var(--cream);border-radius:2px;border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">PM's position:</div>
+            <div style="font-size:12px">${isDispute ? (n.disputeEvidence||'—') : '<em style="color:var(--danger)">No response within 48 hours — treat as non-cooperation</em>'}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="adj-note-${idx}" placeholder="Ruling note (optional)" style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:2px;padding:8px 11px;font-family:'Jost',sans-serif;font-size:12px;background:var(--cream)"/>
+          <button onclick="adjRule(${idx},'uphold')" style="background:var(--danger);color:#fff;border:none;border-radius:2px;padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Uphold NCR — PM must rectify</button>
+          <button onclick="adjRule(${idx},'overturn')" style="background:none;border:1px solid var(--border);color:var(--charcoal);border-radius:2px;padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer">Overturn — dismiss NCR</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  window._adjQueue = queue;
+}
+
+async function adjSignIn() {
+  const username = document.getElementById('adj-user').value.trim();
+  const password = document.getElementById('adj-pass').value;
+  if (!username || !password) { toast('Enter credentials','err'); return; }
+  try {
+    const r = await apiGet('login', {username, password});
+    if (!r.ok) throw new Error(r.error || 'Invalid credentials');
+    if (!['ceo','coo'].includes(r.role)) throw new Error('Only CEO or COO accounts can adjudicate');
+    adjudicator = {username: r.username, password, role: r.role};
+    sessionStorage.setItem(ADJ_SK, JSON.stringify(adjudicator));
+    toast('Signed in as ' + r.role.toUpperCase(),'ok');
+    renderAdjudication();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function adjRule(idx, decision) {
+  if (!adjudicator) { toast('Sign in with CEO/COO credentials first','err'); return; }
+  const n = window._adjQueue[idx];
+  const note = document.getElementById('adj-note-' + idx).value.trim();
+  try {
+    const r = await apiCall('adjudicateNCR', {
+      ncrId: n.ncrId, decision, note,
+      username: adjudicator.username, password: adjudicator.password
+    });
+    if (!r.ok) throw new Error(r.error);
+    toast(decision === 'uphold' ? '✓ NCR upheld — PM must rectify' : '✓ NCR overturned and closed','ok');
+    const ncrR = await apiGet('allNCRs');
+    allNCRsData = ncrR.ok ? ncrR.data : [];
+    updateEscBadge();
+    renderAdjudication();
+  } catch(e) { toast(e.message,'err'); }
 }
 
 // ── DELAY ESCALATIONS ────────────────────────────────────────────────────────
