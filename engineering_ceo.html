@@ -533,10 +533,17 @@ function jsonp(url) {
     document.head.appendChild(s);
   });
 }
-function apiCall(action, payload) {
-  let url = API + '?action=' + action;
-  if (payload) url += '&payload=' + encodeURIComponent(JSON.stringify(payload));
-  return jsonp(url);
+async function apiCall(action, payload) {
+  // Writes go via POST — GET+JSONP has a practical URL-length ceiling that
+  // silently breaks once a payload carries several Drive URLs / long text
+  // (e.g. a building with many completed floors). Reads stay on apiGet/GET
+  // since they are small (just filters) and benefit from JSONP simplicity.
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action, payload: payload || {} })
+  });
+  return res.json();
 }
 function apiGet(action, params) {
   let url = API + '?action=' + action;
