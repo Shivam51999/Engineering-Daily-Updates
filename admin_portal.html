@@ -325,6 +325,41 @@ canvas{max-height:220px}
     <!-- FLOOR SCHEDULE TAB -->
     <div class="ml-tc" id="tab-schedule">
 
+      <div class="ml-card" style="border-top:3px solid var(--red)">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🏗️</div><h3>Apply Standard Midas Schedule Template</h3><span>Company-standard phase sequence — floor count varies, milestones don't</span></div>
+        <div class="ml-card-body">
+          <div style="font-size:11px;color:var(--warm);margin-bottom:14px;line-height:1.7">
+            Derived from Midas City's tracked schedules (Wings A/B/F). Generates the floor-by-floor RCC cycle and every standard milestone (Plinth, slab-completion %, structure top-out, all finishing trades, possession) scaled to a new start date. <strong>Review and edit before saving</strong> — this only fills the forms below, it does not save anything by itself.
+          </div>
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div class="ml-field"><label>Site</label>
+              <select id="tmpl-site" onchange="document.getElementById('sch-site').value=this.value; loadBldSch();"><option value="">Select Site (or use Site above)</option></select>
+            </div>
+            <div class="ml-field"><label>Building</label>
+              <select id="tmpl-bld"><option value="">Select Building (or use Building above)</option></select>
+            </div>
+            <div class="ml-field"><label>Number of Floors (above Ground)</label>
+              <input type="number" id="tmpl-floors" min="1" max="60" value="21" placeholder="e.g. 21"/>
+            </div>
+          </div>
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div class="ml-field"><label>Excavation Start Date</label>
+              <input type="date" id="tmpl-start"/>
+            </div>
+            <div class="ml-field"><label>Include Refuge Floors?</label>
+              <select id="tmpl-refuge">
+                <option value="yes">Yes — every 5th floor from 7th (fire-safety standard)</option>
+                <option value="no">No refuge floors on this project</option>
+              </select>
+            </div>
+            <div class="ml-field"><label>&nbsp;</label>
+              <button onclick="generateStandardTemplate()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:11px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.5px;width:100%">🏗️ Generate Template →</button>
+            </div>
+          </div>
+          <div id="tmpl-status" style="font-size:11px;color:var(--ok);display:none;padding:10px;background:var(--ok-bg);border-radius:2px"></div>
+        </div>
+      </div>
+
       <div class="ml-card">
         <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📅</div><h3>Set Floor Schedule</h3><span>Plan construction dates per floor per building</span></div>
         <div class="ml-card-body">
@@ -769,7 +804,7 @@ async function loadProjectsTab() {
 }
 
 function populateAllSiteDropdowns(sites) {
-  ['sch-site','flatsch-site','mil-site'].forEach(id => {
+  ['sch-site','flatsch-site','mil-site','tmpl-site'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const current = sel.value;
@@ -844,12 +879,17 @@ async function loadBldSch() {
   const sel=document.getElementById('sch-bld');
   sel.innerHTML='<option value="">Select Building</option>';
   document.getElementById('sch-tbody').innerHTML='';
+  const tmplSel = document.getElementById('tmpl-bld');
+  if (tmplSel) tmplSel.innerHTML = '<option value="">Select Building (or use Building above)</option>';
   if (!site) return;
   try {
     const r = await apiGet('buildings', {site});
     let names = (r.ok && r.data && r.data.length) ? r.data.map(b => b.building || b.name).filter(Boolean) : [];
     if (!names.length) names = BLD_MAP[site] || []; // fallback for legacy hardcoded sites
-    names.forEach(b => sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
+    names.forEach(b => {
+      sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b}));
+      if (tmplSel) tmplSel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b}));
+    });
   } catch(e) {
     (BLD_MAP[site]||[]).forEach(b=>sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
   }
@@ -1158,6 +1198,130 @@ function fmtDateShort(d) {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}); }
   catch(e) { return d; }
+}
+
+// ── STANDARD MIDAS SCHEDULE TEMPLATE ──────────────────────────
+// Durations extracted from Midas City Wing F tracked schedule (most granular).
+// These are company-standard phase durations — floor count changes,
+// this sequence does not.
+const MIDAS_FLOOR_DURATIONS = {
+  excavation: 30, substructure: 40, plinth: 5,
+  ground: 35, first: 25, second: 20, typical: 15, terrace: 20, ohwt: 45
+};
+
+// Finishing-trade and headline milestones as day-offsets from Excavation start,
+// derived from Wing F baseline finish dates. These trades run in parallel with
+// the structure and largely don't scale with floor count — durations here are
+// what Midas City actually took, not a per-floor formula.
+const MIDAS_MILESTONE_OFFSETS = [
+  {title:'Excavation Complete', days:29},
+  {title:'Substructure Complete (PCC + Footing + Column & Lift)', days:65},
+  {title:'15% - On Completion of Plinth', days:70},
+  {title:'5% - On Completion of 1st Slab', days:105},
+  {title:'Structure Top-Out — OHWT/LMR/Parapet Complete', days:500},
+  {title:'Blockwork Complete', days:480},
+  {title:'Electrical Wall Conduiting Complete', days:473},
+  {title:'Internal Plaster Complete', days:485},
+  {title:'Gypsum Plaster Complete', days:497},
+  {title:'Fabrication (MS/Railings) Complete', days:624},
+  {title:'Toilet Waterproofing Complete', days:542},
+  {title:'5% - External Plaster, Elevation & Terrace Waterproofing Complete', days:587},
+  {title:'Balcony Waterproofing Complete', days:705},
+  {title:'Tiling & Granite Works Complete', days:733},
+  {title:'Aluminium Window & Door Complete', days:737},
+  {title:'Plumbing Work Complete', days:735},
+  {title:'Carpentry Work Complete', days:778},
+  {title:'Electrical Work Complete', days:791},
+  {title:'Painting Work Complete', days:846},
+  {title:'Acid Wash Complete', days:835},
+  {title:'Services Complete', days:680},
+  {title:'Possession Project Finish', days:850},
+  {title:'5% - Handover to Allottee (OC/CC Received)', days:873}
+];
+
+function addDaysISO(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+
+function ordinal(n) {
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
+function generateStandardFloorRows(startDate, numFloors, includeRefuge) {
+  const T = MIDAS_FLOOR_DURATIONS;
+  const rows = [];
+  let cur = startDate;
+
+  rows.push({floor:'Excavation', plannedStart:cur, plannedEnd:addDaysISO(cur,T.excavation), plannedPct:100, notes:'Standard template'});
+  cur = addDaysISO(cur, T.excavation);
+
+  rows.push({floor:'Substructure (PCC+Footing+Column&Lift)', plannedStart:cur, plannedEnd:addDaysISO(cur,T.substructure), plannedPct:100, notes:''});
+  cur = addDaysISO(cur, T.substructure);
+
+  rows.push({floor:'Plinth', plannedStart:cur, plannedEnd:addDaysISO(cur,T.plinth), plannedPct:15, notes:'15% milestone'});
+  cur = addDaysISO(cur, T.plinth);
+
+  rows.push({floor:'Ground Floor', plannedStart:cur, plannedEnd:addDaysISO(cur,T.ground), plannedPct:100, notes:'1st Slab · 5% milestone'});
+  cur = addDaysISO(cur, T.ground);
+
+  rows.push({floor:'1st Floor', plannedStart:cur, plannedEnd:addDaysISO(cur,T.first), plannedPct:100, notes:'2nd Slab'});
+  cur = addDaysISO(cur, T.first);
+
+  rows.push({floor:'2nd Floor', plannedStart:cur, plannedEnd:addDaysISO(cur,T.second), plannedPct:100, notes:'3rd Slab'});
+  cur = addDaysISO(cur, T.second);
+
+  for (let f = 3; f <= numFloors; f++) {
+    const isRefuge = includeRefuge && f >= 7 && ((f - 7) % 5 === 0);
+    const label = ordinal(f) + ' Floor' + (isRefuge ? ' - Refuge Floor' : '');
+    const isMilestoneFloor = (f - 1) % 5 === 0; // matches 6th,11th,16th,21st slab pattern
+    rows.push({floor:label, plannedStart:cur, plannedEnd:addDaysISO(cur,T.typical), plannedPct:100,
+               notes: isMilestoneFloor ? '5% milestone' : ''});
+    cur = addDaysISO(cur, T.typical);
+  }
+
+  rows.push({floor:'Terrace Floor', plannedStart:cur, plannedEnd:addDaysISO(cur,T.terrace), plannedPct:100, notes:''});
+  cur = addDaysISO(cur, T.terrace);
+
+  rows.push({floor:'OHWT/LMR/Parapet/Elevational Features', plannedStart:cur, plannedEnd:addDaysISO(cur,T.ohwt), plannedPct:100, notes:'Structure top-out'});
+
+  return rows;
+}
+
+function generateStandardTemplate() {
+  const site = document.getElementById('tmpl-site').value || document.getElementById('sch-site').value;
+  const bld = document.getElementById('tmpl-bld').value || document.getElementById('sch-bld').value;
+  const numFloors = parseInt(document.getElementById('tmpl-floors').value) || 21;
+  const startDate = document.getElementById('tmpl-start').value;
+  const includeRefuge = document.getElementById('tmpl-refuge').value === 'yes';
+
+  if (!site) { toast('Select a site (use the Site field above or here)','err'); return; }
+  if (!bld) { toast('Select a building (use the Building field above or here)','err'); return; }
+  if (!startDate) { toast('Set the Excavation start date','err'); return; }
+
+  // Sync the main site/building selects so Save Schedule targets the right building
+  document.getElementById('sch-site').value = site;
+  loadBldSch().then(() => { document.getElementById('sch-bld').value = bld; });
+
+  // 1. Floor schedule rows
+  const floorRows = generateStandardFloorRows(startDate, numFloors, includeRefuge);
+  document.getElementById('sch-tbody').innerHTML = '';
+  floorRows.forEach(r => addSchRow(r));
+
+  // 2. Milestone rows — feed the existing bulk-import preview pipeline
+  milImportRows = MIDAS_MILESTONE_OFFSETS.map(m => ({
+    site, title: m.title, targetDate: addDaysISO(startDate, m.days),
+    status: 'Pending', notes: 'Generated from Midas standard template', issue: ''
+  }));
+  renderMilPreview();
+
+  const status = document.getElementById('tmpl-status');
+  status.style.display = 'block';
+  status.innerHTML = `✓ Generated ${floorRows.length} floor-schedule rows (above) and ${milImportRows.length} milestones (in the Bulk Upload preview below). Review both, then click <strong>Save Schedule</strong> and <strong>Confirm Import</strong> separately — nothing is saved yet.`;
+  toast('Template generated — review before saving','ok');
+  status.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 // ── MILESTONE TEMPLATE DOWNLOAD / UPLOAD ──────────────────────
