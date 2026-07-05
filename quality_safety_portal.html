@@ -645,6 +645,26 @@ function apiGet(action, params) {
   if (params) Object.keys(params).forEach(k => url += '&' + k + '=' + encodeURIComponent(params[k]));
   return jsonp(url);
 }
+// Upload a file (photo evidence) via POST as base64 — bypasses JSONP/GET URL length limits
+async function uploadFile(site, file, kind, filenameHint) {
+  const base64Data = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('File read failed'));
+    r.readAsDataURL(file);
+  });
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({
+      action: 'uploadFile', site, base64Data,
+      mimeType: file.type, filenameHint: filenameHint||kind, kind
+    })
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Upload failed');
+  return data.url;
+}
 let _toast_t;
 function toast(msg, type) {
   const el = document.getElementById('toast');
