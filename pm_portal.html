@@ -724,7 +724,17 @@ async function selectBld(name) {
 }
 
 const FLOOR_TYPES = ['Structural','Finishing','MEP','Common'];
-const FLOOR_ACTIVITIES = ['Shuttering','Rebar/Steel','Concreting','Deshuttering','Brickwork','Plaster','Tiles','Electrical','Plumbing','Painting','Waterproofing','Landscaping','Inspection'];
+const ACTIVITY_MAP = {
+  'Structural': ['Shuttering','Rebar/Steel','Concreting','Deshuttering'],
+  'Finishing':  ['Brickwork','Plaster','Tiles','Painting','Waterproofing','Landscaping'],
+  'MEP':        ['Electrical','Plumbing'],
+  'Common':     ['Inspection','Housekeeping','Scaffolding']
+};
+const FLOOR_ACTIVITIES = Object.values(ACTIVITY_MAP).flat(); // flat list, kept for any code that needs "all activities"
+
+function activitiesForType(type) {
+  return ACTIVITY_MAP[type] || FLOOR_ACTIVITIES;
+}
 const FLOOR_STATUSES = ['Not Started','In Progress','Completed','On Hold','Blocked'];
 
 // Per-floor gate state: { photoUrl, photoFile, checklistDone, checklistPdfUrl, checklistPdfFile }
@@ -748,10 +758,10 @@ function floorCard(f) {
     </div>
     <div class="floor-card-body">
       <div class="ml-field"><label>Type</label>
-        <select class="fl-type">${FLOOR_TYPES.map(t=>`<option${t===f.type?' selected':''}>`+t+`</option>`).join('')}</select>
+        <select class="fl-type" onchange="onFloorTypeChange(this)">${FLOOR_TYPES.map(t=>`<option${t===f.type?' selected':''}>`+t+`</option>`).join('')}</select>
       </div>
       <div class="ml-field"><label>Activity</label>
-        <select class="fl-act">${FLOOR_ACTIVITIES.map(a=>`<option${a===f.activity?' selected':''}>`+a+`</option>`).join('')}</select>
+        <select class="fl-act">${activitiesForType(f.type).map(a=>`<option${a===f.activity?' selected':''}>`+a+`</option>`).join('')}</select>
       </div>
       <div class="ml-field"><label>Status</label>
         <select class="fl-status" onchange="onFloorStatusChange(this)">${FLOOR_STATUSES.map(s=>`<option${s===f.status?' selected':''}>`+s+`</option>`).join('')}</select>
@@ -807,6 +817,16 @@ function floorCard(f) {
 }
 
 const DELAY_REASONS = ['Material shortage','Labour shortage','Contractor unavailable','Drawing/design issue','Approval pending','Quality/Safety hold','Weather','Other'];
+
+function onFloorTypeChange(sel) {
+  const card = sel.closest('.floor-card');
+  const actSel = card.querySelector('.fl-act');
+  const currentVal = actSel.value;
+  const opts = activitiesForType(sel.value);
+  actSel.innerHTML = opts.map(a => `<option${a===currentVal?' selected':''}>${a}</option>`).join('');
+  // If the previously chosen activity doesn't belong to the new type, default to the first valid one
+  if (!opts.includes(currentVal)) actSel.value = opts[0] || '';
+}
 
 function onFloorStatusChange(sel) {
   const card = sel.closest('.floor-card');
