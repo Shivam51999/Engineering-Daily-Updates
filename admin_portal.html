@@ -269,6 +269,7 @@ canvas{max-height:220px}
 
   <div class="ml-tabs">
     <div class="ml-tab active" onclick="stab('projects',this);loadProjectsTab()">🏗️ Manage Projects</div>
+    <div class="ml-tab" onclick="stab('users',this);loadUsersTab()">👤 Manage Users</div>
     <div class="ml-tab" onclick="stab('schedule',this)">📅 Floor Schedule</div>
     <div class="ml-tab" onclick="stab('flatschedule',this)">🏠 Flat Schedule</div>
     <div class="ml-tab" onclick="stab('milestones',this)">🏁 Milestones</div>
@@ -321,6 +322,63 @@ canvas{max-height:220px}
       </div>
 
     </div><!-- /tab-projects -->
+
+    <!-- MANAGE USERS TAB -->
+    <div class="ml-tc" id="tab-users">
+
+      <div style="font-size:10px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--white);border-radius:2px;border-left:3px solid var(--red)">
+        The <strong>Site</strong> field for PM and Store logins must match a project in Manage Projects <strong>exactly</strong> — same spelling, same capitalization. A mismatch here is the #1 cause of "no buildings found" errors in the PM portal.
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">➕</div><h3>Create New User</h3></div>
+        <div class="ml-card-body">
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div class="ml-field"><label>Username</label>
+              <input type="text" id="nu-username" placeholder="e.g. midas_pm"/>
+            </div>
+            <div class="ml-field"><label>Password</label>
+              <input type="text" id="nu-password" placeholder="Min. 6 characters"/>
+            </div>
+            <div class="ml-field"><label>Role</label>
+              <select id="nu-role" onchange="onRoleChange()">
+                <option value="pm">Project Manager (PM)</option>
+                <option value="store">Store</option>
+                <option value="quality">Quality</option>
+                <option value="safety">Safety</option>
+                <option value="admin">Admin</option>
+                <option value="ceo">CEO</option>
+                <option value="coo">COO</option>
+              </select>
+            </div>
+          </div>
+          <div class="ml-grid-3" style="margin-bottom:12px">
+            <div class="ml-field" id="nu-site-field"><label>Site</label>
+              <select id="nu-site"><option value="">Select Site</option></select>
+            </div>
+            <div class="ml-field" style="grid-column:span 2"><label>Full Name</label>
+              <input type="text" id="nu-name" placeholder="e.g. Rajesh Kumar"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button onclick="generateSuggestedCreds()" style="background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:10px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--charcoal)">✨ Suggest username/password</button>
+            <button onclick="createUser()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:11px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.5px">+ Create User</button>
+          </div>
+          <div id="nu-status" style="display:none;margin-top:12px;font-size:11px;padding:10px;border-radius:2px"></div>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">👥</div><h3>All Users</h3><span id="user-count"></span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Username</th><th>Role</th><th>Site</th><th>Name</th><th>Status</th><th></th></tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-users -->
 
     <!-- FLOOR SCHEDULE TAB -->
     <div class="ml-tc" id="tab-schedule">
@@ -641,6 +699,21 @@ canvas{max-height:220px}
   </div>
 </div>
 
+<!-- Reset password modal -->
+<div class="ml-modal-bg" id="reset-pw-modal" style="display:none">
+  <div class="ml-modal">
+    <h3>Reset Password</h3>
+    <p style="font-size:13px;color:var(--charcoal);line-height:1.7;margin-bottom:12px">
+      Set a new password for <strong id="reset-pw-username"></strong>.
+    </p>
+    <input type="text" id="reset-pw-value" placeholder="New password (min. 6 characters)" style="width:100%;border:1px solid var(--border);border-radius:2px;padding:10px 12px;font-family:'Jost',sans-serif;font-size:13px;margin-bottom:16px"/>
+    <div class="ml-modal-btns">
+      <button onclick="document.getElementById('reset-pw-modal').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Cancel</button>
+      <button id="reset-pw-confirm-btn" onclick="confirmResetPassword()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer">Reset Password</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 const API = 'https://script.google.com/macros/s/AKfycbw7q3Z1BTbiBsnNmquV7WxjXEDeN-3vhhm4YCOiOob4UvpOQ71KJ4LDqoUhUGePWwm0/exec';
@@ -763,6 +836,139 @@ function showApp() {
 
 // ── MANAGE PROJECTS ───────────────────────────────────────────
 let activeSitesCache = [];
+
+// ── MANAGE USERS ───────────────────────────────────────────────
+const ROLE_LABELS = {pm:'Project Manager', store:'Store', quality:'Quality', safety:'Safety', admin:'Admin', ceo:'CEO', coo:'COO'};
+
+function onRoleChange() {
+  const role = document.getElementById('nu-role').value;
+  const siteField = document.getElementById('nu-site-field');
+  // Site is only meaningful for PM and Store — hide it for HQ-level roles
+  siteField.style.display = (role === 'pm' || role === 'store') ? 'block' : 'none';
+}
+
+function slugify(s) {
+  return String(s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+}
+
+function generateSuggestedCreds() {
+  const role = document.getElementById('nu-role').value;
+  const site = document.getElementById('nu-site').value;
+  const roleTag = {pm:'pm', store:'store', quality:'quality_dept', safety:'safety_dept', admin:'admin', ceo:'ceo', coo:'coo'}[role] || role;
+  let username;
+  if (role === 'pm' || role === 'store') {
+    if (!site) { toast('Select a site first to generate a username','err'); return; }
+    username = slugify(site) + '_' + roleTag;
+  } else {
+    username = roleTag;
+  }
+  const sitePart = site ? site.replace(/[^a-zA-Z]/g,'').slice(0,8) : 'Mangalam';
+  const password = 'ML@' + sitePart.charAt(0).toUpperCase() + sitePart.slice(1) + Math.floor(Math.random()*90+10);
+  document.getElementById('nu-username').value = username;
+  document.getElementById('nu-password').value = password;
+  toast('Suggested — edit if you prefer something else','');
+}
+
+async function loadUsersTab() {
+  // Populate site dropdown for the "new user" form from active projects
+  const siteSel = document.getElementById('nu-site');
+  if (activeSitesCache.length) {
+    const cur = siteSel.value;
+    siteSel.innerHTML = '<option value="">Select Site</option>' + activeSitesCache.map(s=>`<option>${s}</option>`).join('');
+    if (activeSitesCache.includes(cur)) siteSel.value = cur;
+  }
+  onRoleChange();
+
+  try {
+    const r = await apiCall('listUsers', {});
+    if (!r.ok) throw new Error(r.error);
+    const users = r.data;
+    document.getElementById('user-count').textContent = users.length + ' user(s)';
+    const tb = document.getElementById('users-tbody');
+    tb.innerHTML = users.map(u => {
+      const siteMismatch = (u.role==='pm'||u.role==='store') && u.site && !activeSitesCache.includes(u.site);
+      return `<tr>
+        <td><strong>${u.username}</strong></td>
+        <td>${ROLE_LABELS[u.role]||u.role}</td>
+        <td>${u.site || '—'} ${siteMismatch ? `<span class="chip chip-danger" title="Does not match any active project — buildings will be invisible to this user">⚠️ mismatch</span>` : ''}</td>
+        <td>${u.name || '—'}</td>
+        <td><span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;text-transform:uppercase;background:${u.active?'var(--ok-bg)':'var(--danger-bg)'};color:${u.active?'var(--ok)':'var(--danger)'}">${u.active?'Active':'Disabled'}</span></td>
+        <td style="display:flex;gap:6px">
+          <button onclick="openResetPassword('${u.username}')" style="background:none;border:1px solid var(--border);border-radius:2px;padding:6px 10px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--charcoal)">Reset PW</button>
+          <button onclick="toggleUserActive('${u.username}', ${!u.active})" style="background:none;border:1px solid ${u.active?'var(--danger)':'var(--ok)'};border-radius:2px;padding:6px 10px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:${u.active?'var(--danger)':'var(--ok)'}">${u.active?'Disable':'Enable'}</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--warm)">No users yet</td></tr>';
+  } catch(e) { toast('Could not load users: '+e.message,'err'); }
+}
+
+async function createUser() {
+  const username = document.getElementById('nu-username').value.trim();
+  const password = document.getElementById('nu-password').value.trim();
+  const role = document.getElementById('nu-role').value;
+  const site = document.getElementById('nu-site').value;
+  const name = document.getElementById('nu-name').value.trim();
+
+  if (!username) { toast('Enter a username','err'); return; }
+  if (!password || password.length < 6) { toast('Password must be at least 6 characters','err'); return; }
+  if ((role === 'pm' || role === 'store') && !site) { toast('Select a site for this role','err'); return; }
+
+  try {
+    const r = await apiCall('addUser', {
+      username, password, role, site, name, createdBy: user.username
+    });
+    if (!r.ok) throw new Error(r.error);
+    const statusEl = document.getElementById('nu-status');
+    statusEl.style.display = 'block';
+    if (r.siteWarning) {
+      statusEl.style.background = 'var(--danger-bg)'; statusEl.style.color = 'var(--danger)';
+      statusEl.innerHTML = `✓ User "${username}" created — but <strong>${r.siteWarning}</strong>`;
+    } else {
+      statusEl.style.background = 'var(--ok-bg)'; statusEl.style.color = 'var(--ok)';
+      statusEl.innerHTML = `✓ User "${username}" created successfully.`;
+    }
+    toast('User created','ok');
+    document.getElementById('nu-username').value = '';
+    document.getElementById('nu-password').value = '';
+    document.getElementById('nu-name').value = '';
+    loadUsersTab();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+let resetPwTarget = null;
+function openResetPassword(username) {
+  resetPwTarget = username;
+  document.getElementById('reset-pw-username').textContent = username;
+  document.getElementById('reset-pw-value').value = '';
+  document.getElementById('reset-pw-modal').style.display = 'flex';
+}
+
+async function confirmResetPassword() {
+  const newPassword = document.getElementById('reset-pw-value').value.trim();
+  if (!newPassword || newPassword.length < 6) { toast('Password must be at least 6 characters','err'); return; }
+  const btn = document.getElementById('reset-pw-confirm-btn');
+  btn.disabled = true;
+  try {
+    const r = await apiCall('resetPassword', {
+      username: resetPwTarget, newPassword, updatedBy: user.username
+    });
+    if (!r.ok) throw new Error(r.error);
+    toast(`✓ Password reset for ${resetPwTarget}`,'ok');
+    document.getElementById('reset-pw-modal').style.display = 'none';
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false;
+}
+
+async function toggleUserActive(username, newActive) {
+  try {
+    const r = await apiCall('updateUser', {
+      username, active: newActive, updatedBy: user.username
+    });
+    if (!r.ok) throw new Error(r.error);
+    toast(`✓ ${username} ${newActive?'enabled':'disabled'}`,'ok');
+    loadUsersTab();
+  } catch(e) { toast(e.message,'err'); }
+}
 
 async function loadProjectsTab() {
   try {
