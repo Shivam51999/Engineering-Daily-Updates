@@ -440,6 +440,7 @@ canvas{max-height:220px}
       <div id="flat-detail-card" style="display:none">
         <div class="ml-card">
           <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🚪</div><h3>Flat <span id="flat-detail-num"></span> — Finishing Activities</h3></div>
+          <div id="flat-activity-fallback-note" style="display:none;font-size:11px;color:var(--warm);padding:8px 14px;background:var(--cream-d);border-left:3px solid var(--warm)">Admin hasn't set a Flat Activity Schedule for this floor yet, so the default trade list is shown. Deviation tracking for this floor won't appear on the Admin dashboard until it's scheduled.</div>
           <div class="ml-card-body" id="flat-activity-cards"></div>
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:24px">
@@ -1082,7 +1083,13 @@ async function doSubmit() {
 }
 
 // ── FLAT-WISE STATUS TAB ──────────────────────────────────────
+// Fallback only — used for a floor Admin hasn't scheduled activities for yet.
+// The real, current list for a scheduled floor comes live from Admin Portal's
+// Flat Activity Schedule (see faActivityCache below), so Admin stays the single
+// source of truth for activity names; this constant just keeps things working
+// before Admin has set anything up for a given building/floor.
 const FLAT_ACTIVITIES = ['Tiles','Painting','Plumbing Fittings','Electrical Fittings','Doors/Windows','Kitchen','Bathroom Fittings','Final Cleaning'];
+let faActivityCache = {}; // faActivityCache[building] = raw rows from Admin's flatActivitySchedule
 let flatSchedule = [];   // floors with flats for selected building, from FloorSchedule
 let flatBuildingFloors = []; // floor names with flats configured (from FlatSchedule)
 let currentFlatList = [];
@@ -1119,6 +1126,14 @@ async function onFlatBldChange() {
   } catch(e) {
     floorSel.innerHTML = '<option value="">Select Floor</option>' +
       MASTER_FLOORS.map(f => `<option value="${f}">${f}</option>`).join('');
+  }
+  // Pull Admin's planned floor×activity list for this building — this is what
+  // drives which activities show up per flat below, not the hardcoded fallback.
+  try {
+    const far = await apiGet('flatActivitySchedule', {site: user.site, building: bld});
+    faActivityCache[bld] = (far.ok && far.data) ? far.data : [];
+  } catch(e) {
+    faActivityCache[bld] = [];
   }
 }
 
@@ -1167,6 +1182,19 @@ async function renderFlatTags(bld, floor) {
   });
 }
 
+// Resolves which activities show up for a flat on this floor: Admin's planned
+// list for that exact floor if one exists (deduped, in the order Admin set
+// them — usually chronological by plannedStart), otherwise the fallback list.
+function activitiesForFloor(bld, floor) {
+  const rows = (faActivityCache[bld] || []).filter(r => r.floor === floor);
+  if (!rows.length) return {list: FLAT_ACTIVITIES, isFallback: true};
+  rows.sort((a,b) => (a.plannedStart||'').localeCompare(b.plannedStart||''));
+  const seen = new Set();
+  const ordered = [];
+  rows.forEach(r => { if (r.activity && !seen.has(r.activity)) { seen.add(r.activity); ordered.push(r.activity); } });
+  return ordered.length ? {list: ordered, isFallback: false} : {list: FLAT_ACTIVITIES, isFallback: true};
+}
+
 async function selectFlat(bld, floor, flat) {
   selFlatNo = flat;
   await renderFlatTags(bld, floor);
@@ -1182,8 +1210,10 @@ async function selectFlat(bld, floor, flat) {
     }
   } catch(e) {}
 
+  const {list: activityList, isFallback} = activitiesForFloor(bld, floor);
+  document.getElementById('flat-activity-fallback-note').style.display = isFallback ? 'block' : 'none';
   const container = document.getElementById('flat-activity-cards');
-  container.innerHTML = FLAT_ACTIVITIES.map(act => {
+  container.innerHTML = activityList.map(act => {
     const s = saved[act];
     return flatActivityCard(flat, act, {
       status: s ? s.status : 'Not Started',
