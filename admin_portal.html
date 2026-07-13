@@ -272,6 +272,7 @@ canvas{max-height:220px}
     <div class="ml-tab" onclick="stab('users',this);loadUsersTab()">👤 Manage Users</div>
     <div class="ml-tab" onclick="stab('schedule',this)">📅 Floor Schedule</div>
     <div class="ml-tab" onclick="stab('flatschedule',this)">🏠 Flat Schedule</div>
+    <div class="ml-tab" onclick="stab('flatactivity',this)">🧱 Flat Activities</div>
     <div class="ml-tab" onclick="stab('milestones',this)">🏁 Milestones</div>
     <div class="ml-tab" onclick="stab('rfi',this);loadRFIQueue()">📝 RFI Queue <span id="rfi-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
     <div class="ml-tab" onclick="stab('deviation',this);loadDeviation()">🎯 Target vs Achievement</div>
@@ -437,6 +438,11 @@ canvas{max-height:220px}
               </div>
             </div>
           </div>
+          <div id="sch-version-strip" style="display:none;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--charcoal-dark)">
+            <span style="font-size:11px;font-weight:700;color:var(--charcoal)">Current: <span id="sch-version-badge">v1</span></span>
+            <span id="sch-version-meta" style="font-size:10px;color:var(--warm)"></span>
+            <button onclick="openVersionHistory()" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:2px;padding:5px 12px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--charcoal)">📜 Version History</button>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:12px;border-top:1px solid var(--border)">
             <span style="font-size:10px;color:var(--warm);min-width:110px">No building yet?</span>
             <input type="text" id="sch-new-bld-name" placeholder="New building name" style="border:1px solid var(--border);border-radius:2px;padding:7px 10px;font-family:'Jost',sans-serif;font-size:12px;background:var(--cream);outline:none;flex:1"/>
@@ -530,6 +536,61 @@ canvas{max-height:220px}
       </div>
 
     </div><!-- /tab-flatschedule -->
+
+    <!-- FLAT FINISHING ACTIVITY SCHEDULE TAB -->
+    <div class="ml-tc" id="tab-flatactivity">
+
+      <div class="ml-card" style="border-top:3px solid var(--red)">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">🧱</div><h3>Flat Finishing Activity Schedule</h3><span>Planned dates per floor, per finishing trade — deviation is tracked at this level, not just floor RCC</span></div>
+        <div class="ml-card-body">
+          <div style="font-size:11px;color:var(--warm);margin-bottom:14px;line-height:1.7">
+            Set a planned start/end for each finishing activity (plaster, tiling, electrical, painting, etc.) per floor. Actual completion is pulled automatically from flat-wise submissions in the PM portal — once every flat on a floor reports an activity as Completed, that floor+activity counts as done.
+          </div>
+          <div class="ml-grid-3" style="margin-bottom:0">
+            <div class="ml-field"><label>Site</label>
+              <select id="fa-site" onchange="loadBldFA()">
+                <option value="">Select Site</option>
+              </select>
+            </div>
+            <div class="ml-field"><label>Building</label>
+              <select id="fa-bld" onchange="loadExistingFA()"><option value="">Select Building</option></select>
+            </div>
+            <div class="ml-field"><label>Actions</label>
+              <div style="display:flex;gap:6px">
+                <button onclick="loadStandardActivities()" style="flex:1;background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:9px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--charcoal)">Standard Trades</button>
+                <button onclick="addFARow()" style="flex:1;background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:9px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--charcoal)">+ Add Row</button>
+              </div>
+            </div>
+          </div>
+          <div id="fa-version-strip" style="display:none;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;background:var(--cream-d);border-radius:2px;border-left:3px solid var(--charcoal-dark)">
+            <span style="font-size:11px;font-weight:700;color:var(--charcoal)">Current: <span id="fa-version-badge">v1</span></span>
+            <span id="fa-version-meta" style="font-size:10px;color:var(--warm)"></span>
+            <button onclick="openVersionHistoryFA()" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:2px;padding:5px 12px;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--charcoal)">📜 Version History</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">📐</div><h3>Floor × Activity Timeline Rows</h3><span>"Standard Trades" fills one row per floor per activity — edit dates before saving</span></div>
+        <div class="ml-card-body" style="padding:0">
+          <table class="ml-tbl">
+            <thead><tr><th>Floor</th><th>Activity</th><th>Planned Start</th><th>Planned End</th><th>Notes</th><th></th></tr></thead>
+            <tbody id="fa-tbody"></tbody>
+          </table>
+          <div style="padding:12px 14px">
+            <button class="ml-add-row" onclick="addFARow()">+ Add Row</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button id="fa-save-btn" onclick="saveFA()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:12px 32px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;position:relative;overflow:hidden">
+          <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)"></span>
+          Save Activity Schedule →
+        </button>
+      </div>
+
+    </div><!-- /tab-flatactivity -->
 
     <!-- MILESTONES TAB -->
     <div class="ml-tc" id="tab-milestones">
@@ -659,6 +720,28 @@ canvas{max-height:220px}
         </table>
       </div>
 
+      <div style="font-size:10px;color:var(--warm);margin:28px 0 14px;padding:8px 12px;background:var(--white);border-radius:2px;border-left:3px solid var(--red)">
+        Finishing-trade deviation, per floor per activity — measured against the Flat Activity Schedule baseline (v1), same rule as above. Actual completion comes from flat-wise submissions in the PM portal; a floor+activity counts done once every flat on that floor reports it Completed.
+      </div>
+
+      <div class="ml-kpi-strip">
+        <div class="ml-kpi green"><div class="ml-kpi-label">On / Ahead of Target</div><div class="ml-kpi-value green" id="dev-fa-ontrack">—</div><div class="ml-kpi-sub">floor × activity</div></div>
+        <div class="ml-kpi amber"><div class="ml-kpi-label">Slipping (1–14 days)</div><div class="ml-kpi-value amber" id="dev-fa-slipping">—</div><div class="ml-kpi-sub">floor × activity</div></div>
+        <div class="ml-kpi red"><div class="ml-kpi-label">Breached (15+ days)</div><div class="ml-kpi-value red" id="dev-fa-breached">—</div><div class="ml-kpi-sub">floor × activity</div></div>
+        <div class="ml-kpi"><div class="ml-kpi-label">Activity Revisions</div><div class="ml-kpi-value" id="dev-fa-revisions">—</div><div class="ml-kpi-sub">goalpost moves logged</div></div>
+      </div>
+
+      <div class="ml-section-label"><h2>Flat Finishing Activity Deviation (vs Original Baseline)</h2></div>
+      <div id="dev-fa-body"></div>
+
+      <div class="ml-section-label" style="margin-top:24px"><h2>Flat Activity Revision Log</h2></div>
+      <div class="ml-card" style="overflow:hidden">
+        <table class="ml-tbl">
+          <thead><tr><th>Site</th><th>Building</th><th>Floor</th><th>Activity</th><th>Field</th><th>Old → New</th><th>Reason</th><th>By</th><th>When</th></tr></thead>
+          <tbody id="dev-fa-rev-tbody"></tbody>
+        </table>
+      </div>
+
     </div><!-- /tab-deviation -->
 
     <div class="ml-tc" id="tab-overview">
@@ -710,6 +793,78 @@ canvas{max-height:220px}
     <div class="ml-modal-btns">
       <button onclick="document.getElementById('reset-pw-modal').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Cancel</button>
       <button id="reset-pw-confirm-btn" onclick="confirmResetPassword()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer">Reset Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Version History modal -->
+<div class="ml-modal-bg" id="ver-hist-modal" style="display:none">
+  <div class="ml-modal" style="max-width:640px">
+    <h3>Schedule Version History — <span id="ver-hist-bld"></span></h3>
+    <p style="font-size:11px;color:var(--warm);line-height:1.6;margin-bottom:14px">
+      v1 is the original baseline — deviation is always measured against it, no matter how many revisions follow. Click any version to preview its floor list.
+    </p>
+    <div id="ver-hist-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:2px;margin-bottom:14px"></div>
+    <div id="ver-hist-preview"></div>
+    <div class="ml-modal-btns">
+      <button onclick="document.getElementById('ver-hist-modal').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Revise Schedule modal: diff summary + mandatory reason, then saves as a new version -->
+<div class="ml-modal-bg" id="revise-modal" style="display:none">
+  <div class="ml-modal" style="max-width:640px">
+    <h3>Revise Schedule → <span id="revise-version-label">v?</span></h3>
+    <p style="font-size:11px;color:var(--warm);line-height:1.6;margin-bottom:12px">
+      This will save as a new version. Deviation stays measured against the original baseline (v1) — revising targets doesn't reset the clock. Every field below is logged with your reason, visible to CEO/COO.
+    </p>
+    <table class="ml-tbl" style="margin-bottom:14px">
+      <thead><tr><th>Floor</th><th>Field</th><th>Old → New</th></tr></thead>
+      <tbody id="revise-diff-tbody"></tbody>
+    </table>
+    <div class="ml-field"><label>Reason for revision (required)</label>
+      <textarea id="revise-reason" rows="3" placeholder="e.g. Rain delay on excavation pushed the whole RCC cycle by 5 days" style="width:100%;border:1px solid var(--border);border-radius:2px;padding:10px 12px;font-family:'Jost',sans-serif;font-size:13px;resize:vertical"></textarea>
+    </div>
+    <div class="ml-modal-btns">
+      <button onclick="document.getElementById('revise-modal').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Cancel</button>
+      <button id="revise-confirm-btn" onclick="confirmRevise()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer">Save Revision →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Version History modal — Flat Activities -->
+<div class="ml-modal-bg" id="ver-hist-modal-fa" style="display:none">
+  <div class="ml-modal" style="max-width:640px">
+    <h3>Flat Activity Version History — <span id="ver-hist-fa-bld"></span></h3>
+    <p style="font-size:11px;color:var(--warm);line-height:1.6;margin-bottom:14px">
+      v1 is the original baseline — deviation is always measured against it. Click any version to preview its floor × activity list.
+    </p>
+    <div id="ver-hist-fa-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:2px;margin-bottom:14px"></div>
+    <div id="ver-hist-fa-preview"></div>
+    <div class="ml-modal-btns">
+      <button onclick="document.getElementById('ver-hist-modal-fa').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Revise Flat Activity Schedule modal -->
+<div class="ml-modal-bg" id="revise-modal-fa" style="display:none">
+  <div class="ml-modal" style="max-width:640px">
+    <h3>Revise Flat Activity Schedule → <span id="revise-fa-version-label">v?</span></h3>
+    <p style="font-size:11px;color:var(--warm);line-height:1.6;margin-bottom:12px">
+      This will save as a new version. Deviation stays measured against the original baseline (v1). Every field below is logged with your reason, visible to CEO/COO.
+    </p>
+    <table class="ml-tbl" style="margin-bottom:14px">
+      <thead><tr><th>Floor</th><th>Activity</th><th>Field</th><th>Old → New</th></tr></thead>
+      <tbody id="revise-fa-diff-tbody"></tbody>
+    </table>
+    <div class="ml-field"><label>Reason for revision (required)</label>
+      <textarea id="revise-fa-reason" rows="3" placeholder="e.g. Tiling contractor mobilization delayed by 4 days" style="width:100%;border:1px solid var(--border);border-radius:2px;padding:10px 12px;font-family:'Jost',sans-serif;font-size:13px;resize:vertical"></textarea>
+    </div>
+    <div class="ml-modal-btns">
+      <button onclick="document.getElementById('revise-modal-fa').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--warm)">Cancel</button>
+      <button id="revise-fa-confirm-btn" onclick="confirmReviseFA()" style="background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 24px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;cursor:pointer">Save Revision →</button>
     </div>
   </div>
 </div>
@@ -1112,13 +1267,28 @@ async function loadExistingSchedule() {
   const site=document.getElementById('sch-site').value, bld=document.getElementById('sch-bld').value;
   if(!site||!bld) return;
   loadMinLabourForCurrentSelection();
+  const strip = document.getElementById('sch-version-strip');
+  strip.style.display = 'none';
   try {
     const r=await apiGet('schedule',{site,building:bld});
     if(r.ok&&r.data.length) {
       document.getElementById('sch-tbody').innerHTML='';
       r.data.forEach(row=>addSchRow(row));
       toast('Schedule loaded','ok');
-    } else { toast('No existing schedule — add rows below',''); }
+      const ver = Math.max(1, ...r.data.map(row => parseInt(row.version)||1));
+      document.getElementById('sch-version-badge').textContent = 'v' + ver;
+      strip.style.display = 'flex';
+      // Fetch version metadata (who/when/reason) for a friendlier subtitle
+      apiGet('scheduleVersions', {site, building:bld}).then(vr => {
+        if (!vr.ok || !vr.data.length) return;
+        const latest = vr.data[vr.data.length - 1];
+        document.getElementById('sch-version-meta').textContent =
+          vr.data.length + (vr.data.length===1?' version':' versions') +
+          ' · last saved by ' + (latest.savedBy||'—') + ' on ' + fmtDateShort(latest.savedAt);
+      }).catch(()=>{});
+    } else {
+      toast('No existing schedule — add rows below','');
+    }
   } catch(e) { toast('Load failed: '+e.message,'err'); }
 }
 
@@ -1150,10 +1320,8 @@ function loadDefaultFloors() {
   toast('Default floor schedule loaded','ok');
 }
 
-async function saveSchedule() {
-  const site=document.getElementById('sch-site').value, bld=document.getElementById('sch-bld').value;
-  if(!site||!bld) { toast('Select site and building','err'); return; }
-  const rows=Array.from(document.querySelectorAll('#sch-tbody tr')).map(tr=>{
+function collectSchRows() {
+  return Array.from(document.querySelectorAll('#sch-tbody tr')).map(tr=>{
     return {
       floor:tr.querySelector('.sch-floor').value,
       plannedStart:tr.querySelector('.sch-start').value,
@@ -1162,24 +1330,294 @@ async function saveSchedule() {
       notes:tr.querySelector('.sch-notes').value
     };
   }).filter(r=>r.floor);
+}
+
+async function saveSchedule() {
+  const site=document.getElementById('sch-site').value, bld=document.getElementById('sch-bld').value;
+  if(!site||!bld) { toast('Select site and building','err'); return; }
+  const rows = collectSchRows();
   if(!rows.length) { toast('Add at least one floor row','err'); return; }
   const btn=document.getElementById('sch-save-btn'); btn.disabled=true;
   try {
-    let r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username});
+    const r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username});
     if(!r.ok && r.needsReason) {
-      // Targets already exist and something changed — a written reason is mandatory
-      const reason = prompt('⚠️ You are changing ' + r.changeCount + ' existing target(s).\n\nEvery revision is logged and visible to CEO/COO. Deviation stays measured against the ORIGINAL baseline.\n\nReason for revision (required):');
-      if (!reason || !reason.trim()) {
-        toast('Revision cancelled — no reason given','err');
-        btn.disabled=false;
-        return;
-      }
-      r=await apiCall('saveSchedule',{site,building:bld,rows,updatedBy:user.username,revisionReason:reason.trim()});
+      // Targets already exist and something changed — show the exact diff and
+      // collect a mandatory reason in a proper modal instead of a native prompt.
+      openReviseModal(site, bld, rows, r.changes||[], r.nextVersion||'?');
+      btn.disabled=false;
+      return;
     }
     if(!r.ok) throw new Error(r.error);
-    toast(`✓ Schedule saved — ${rows.length} floors for ${bld}, ${site}`,'ok');
+    toast(`✓ Schedule saved as v${r.version} — ${rows.length} floors for ${bld}, ${site}`,'ok');
+    loadExistingSchedule();
   } catch(e) { toast(e.message,'err'); }
   btn.disabled=false;
+}
+
+// ── Revise Schedule modal: diff + reason → saves as a new version ─────
+let _reviseCtx = null;
+function openReviseModal(site, bld, rows, changes, nextVersion) {
+  _reviseCtx = {site, bld, rows};
+  document.getElementById('revise-version-label').textContent = 'v' + nextVersion;
+  const tb = document.getElementById('revise-diff-tbody');
+  tb.innerHTML = changes.length ? changes.map(ch => `<tr>
+      <td><strong>${ch.floor}</strong></td>
+      <td>${ch.field}</td>
+      <td style="font-size:11px">${ch.oldValue||'—'} → <strong>${ch.newValue||'—'}</strong></td>
+    </tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--warm)">No field-level changes detected</td></tr>';
+  document.getElementById('revise-reason').value = '';
+  document.getElementById('revise-modal').style.display = 'flex';
+}
+
+async function confirmRevise() {
+  const reason = document.getElementById('revise-reason').value.trim();
+  if (!reason) { toast('A reason is required to save this revision','err'); return; }
+  if (!_reviseCtx) return;
+  const btn = document.getElementById('revise-confirm-btn'); btn.disabled = true;
+  try {
+    const {site, bld, rows} = _reviseCtx;
+    const r = await apiCall('saveSchedule', {site, building:bld, rows, updatedBy:user.username, revisionReason:reason});
+    if (!r.ok) throw new Error(r.error);
+    document.getElementById('revise-modal').style.display = 'none';
+    toast(`✓ Revision saved as v${r.version} — ${r.changeCount} field(s) changed for ${bld}, ${site}`,'ok');
+    loadExistingSchedule();
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false;
+}
+
+// Jump from the Deviation tab's version badge to Floor Schedule tab, pre-select
+// the site/building, and open its version history — one click, no re-navigating.
+async function jumpToVersionHistory(site, bld) {
+  document.querySelectorAll('.ml-tab').forEach(t => { if (t.textContent.includes('Floor Schedule')) t.click(); });
+  const siteSel = document.getElementById('sch-site');
+  siteSel.value = site;
+  await loadBldSch();
+  document.getElementById('sch-bld').value = bld;
+  await loadExistingSchedule();
+  openVersionHistory();
+}
+
+// ── Version History modal ──────────────────────────────────────
+async function openVersionHistory() {
+  const site=document.getElementById('sch-site').value, bld=document.getElementById('sch-bld').value;
+  if(!site||!bld) return;
+  document.getElementById('ver-hist-bld').textContent = `${bld}, ${site}`;
+  document.getElementById('ver-hist-preview').innerHTML = '';
+  const list = document.getElementById('ver-hist-list');
+  list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--warm);font-size:12px">Loading…</div>';
+  document.getElementById('ver-hist-modal').style.display = 'flex';
+  try {
+    const r = await apiGet('scheduleVersions', {site, building:bld});
+    const versions = r.ok ? r.data : [];
+    if (!versions.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--warm);font-size:12px">No versions yet.</div>'; return; }
+    list.innerHTML = versions.slice().reverse().map(v => `
+      <div class="ver-hist-row" onclick="previewVersion('${site}','${bld}',${v.version})" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px">
+        <strong style="min-width:34px;color:var(--red)">v${v.version}</strong>
+        <span style="font-size:11px;flex:1">${v.reason||'—'}</span>
+        <span style="font-size:10px;color:var(--warm)">${v.savedBy||'—'} · ${fmtDateShort(v.savedAt)}</span>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = '<div style="padding:16px;color:var(--danger);font-size:12px">Could not load versions: '+e.message+'</div>'; }
+}
+
+async function previewVersion(site, bld, version) {
+  const preview = document.getElementById('ver-hist-preview');
+  preview.innerHTML = '<div style="padding:10px;text-align:center;color:var(--warm);font-size:12px">Loading v'+version+'…</div>';
+  try {
+    const r = await apiGet('scheduleVersionDetail', {site, building:bld, version});
+    if (!r.ok) throw new Error(r.error);
+    preview.innerHTML = `<div style="font-size:11px;font-weight:700;margin-bottom:6px">v${r.version} — floor list as saved (${r.savedBy||'—'}, ${fmtDateShort(r.savedAt)})</div>
+      <table class="ml-tbl"><thead><tr><th>Floor</th><th>Start</th><th>End</th><th>Target %</th></tr></thead>
+      <tbody>${r.rows.map(row=>`<tr><td><strong>${row.floor}</strong></td><td>${row.plannedStart||'—'}</td><td>${row.plannedEnd||'—'}</td><td>${row.plannedPct}%</td></tr>`).join('')}</tbody></table>`;
+  } catch(e) { preview.innerHTML = '<div style="color:var(--danger);font-size:12px">'+e.message+'</div>'; }
+}
+
+// ── FLAT FINISHING ACTIVITY SCHEDULE ────────────────────────────
+// This MUST match the PM portal's flat-wise activity list exactly (pm_portal.html
+// FLAT_ACTIVITIES) — Admin is the source of truth for planned dates, but the PM
+// portal now reads its activity options live from what Admin schedules per floor
+// (falling back to this same list only when a floor has no schedule yet). Keeping
+// this constant in sync with the PM portal's fallback avoids the two drifting apart.
+const FA_ACTIVITIES = ['Tiles','Painting','Plumbing Fittings','Electrical Fittings',
+  'Doors/Windows','Kitchen','Bathroom Fittings','Final Cleaning'];
+
+async function loadBldFA() {
+  const site=document.getElementById('fa-site').value;
+  const sel=document.getElementById('fa-bld');
+  sel.innerHTML='<option value="">Select Building</option>';
+  document.getElementById('fa-tbody').innerHTML='';
+  document.getElementById('fa-version-strip').style.display='none';
+  if (!site) return;
+  try {
+    const r = await apiGet('buildings', {site});
+    let names = (r.ok && r.data && r.data.length) ? r.data.map(b => b.building || b.name).filter(Boolean) : [];
+    if (!names.length) names = BLD_MAP[site] || [];
+    names.forEach(b => sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
+  } catch(e) {
+    (BLD_MAP[site]||[]).forEach(b=>sel.appendChild(Object.assign(document.createElement('option'),{text:b,value:b})));
+  }
+}
+
+async function loadExistingFA() {
+  const site=document.getElementById('fa-site').value, bld=document.getElementById('fa-bld').value;
+  if(!site||!bld) return;
+  const strip = document.getElementById('fa-version-strip');
+  strip.style.display = 'none';
+  try {
+    const r = await apiGet('flatActivitySchedule', {site, building:bld});
+    if (r.ok && r.data.length) {
+      document.getElementById('fa-tbody').innerHTML = '';
+      r.data.forEach(row => addFARow(row));
+      toast('Flat activity schedule loaded','ok');
+      const ver = Math.max(1, ...r.data.map(row => parseInt(row.version)||1));
+      document.getElementById('fa-version-badge').textContent = 'v' + ver;
+      strip.style.display = 'flex';
+      apiGet('flatActivityVersions', {site, building:bld}).then(vr => {
+        if (!vr.ok || !vr.data.length) return;
+        const latest = vr.data[vr.data.length - 1];
+        document.getElementById('fa-version-meta').textContent =
+          vr.data.length + (vr.data.length===1?' version':' versions') +
+          ' · last saved by ' + (latest.savedBy||'—') + ' on ' + fmtDateShort(latest.savedAt);
+      }).catch(()=>{});
+    } else {
+      toast('No flat activity schedule yet — use "Standard Trades" or add rows manually','');
+    }
+  } catch(e) { toast('Load failed: '+e.message,'err'); }
+}
+
+function faRow(d) {
+  d=d||{};
+  return `<tr>
+    <td><input type="text" value="${d.floor||''}" class="fa-floor" style="width:110px" placeholder="Floor"/></td>
+    <td><input type="text" value="${d.activity||''}" class="fa-activity" style="width:150px" placeholder="Activity"/></td>
+    <td><input type="date" value="${d.plannedStart||''}" class="fa-start" style="width:130px"/></td>
+    <td><input type="date" value="${d.plannedEnd||''}" class="fa-end" style="width:130px"/></td>
+    <td><input type="text" value="${d.notes||''}" class="fa-notes" style="width:120px" placeholder="Notes"/></td>
+    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px">✕</button></td>
+  </tr>`;
+}
+
+function addFARow(d) {
+  document.getElementById('fa-tbody').insertAdjacentHTML('beforeend', faRow(d));
+}
+
+// Fills one row per floor × standard trade, using the existing Floor Schedule's
+// plannedEnd (RCC completion) as the start point, sequencing trades one after
+// another. Purely a starting point — edit freely before saving.
+async function loadStandardActivities() {
+  const site=document.getElementById('fa-site').value, bld=document.getElementById('fa-bld').value;
+  if(!site||!bld) { toast('Select site and building first','err'); return; }
+  try {
+    const r = await apiGet('schedule', {site, building:bld});
+    const floors = (r.ok && r.data.length) ? r.data : [];
+    if (!floors.length) { toast('No Floor Schedule set for this building yet — set that first, or add rows manually below','err'); return; }
+    document.getElementById('fa-tbody').innerHTML = '';
+    floors.forEach(f => {
+      let cursor = f.plannedEnd ? new Date(f.plannedEnd) : new Date();
+      FA_ACTIVITIES.forEach(act => {
+        const start = new Date(cursor);
+        const end = new Date(start); end.setDate(end.getDate()+6);
+        addFARow({floor:f.floor, activity:act, plannedStart:start.toISOString().slice(0,10), plannedEnd:end.toISOString().slice(0,10)});
+        cursor = new Date(end); cursor.setDate(cursor.getDate()+1);
+      });
+    });
+    toast('Standard trade sequence generated from Floor Schedule — review dates before saving','ok');
+  } catch(e) { toast('Could not generate: '+e.message,'err'); }
+}
+
+function collectFARows() {
+  return Array.from(document.querySelectorAll('#fa-tbody tr')).map(tr=>{
+    return {
+      floor:tr.querySelector('.fa-floor').value,
+      activity:tr.querySelector('.fa-activity').value,
+      plannedStart:tr.querySelector('.fa-start').value,
+      plannedEnd:tr.querySelector('.fa-end').value,
+      notes:tr.querySelector('.fa-notes').value
+    };
+  }).filter(r=>r.floor && r.activity);
+}
+
+async function saveFA() {
+  const site=document.getElementById('fa-site').value, bld=document.getElementById('fa-bld').value;
+  if(!site||!bld) { toast('Select site and building','err'); return; }
+  const rows = collectFARows();
+  if(!rows.length) { toast('Add at least one floor+activity row','err'); return; }
+  const btn=document.getElementById('fa-save-btn'); btn.disabled=true;
+  try {
+    const r=await apiCall('saveFlatActivitySchedule',{site,building:bld,rows,updatedBy:user.username});
+    if(!r.ok && r.needsReason) {
+      openReviseModalFA(site, bld, rows, r.changes||[], r.nextVersion||'?');
+      btn.disabled=false;
+      return;
+    }
+    if(!r.ok) throw new Error(r.error);
+    toast(`✓ Flat activity schedule saved as v${r.version} — ${rows.length} rows for ${bld}, ${site}`,'ok');
+    loadExistingFA();
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled=false;
+}
+
+let _reviseFACtx = null;
+function openReviseModalFA(site, bld, rows, changes, nextVersion) {
+  _reviseFACtx = {site, bld, rows};
+  document.getElementById('revise-fa-version-label').textContent = 'v' + nextVersion;
+  const tb = document.getElementById('revise-fa-diff-tbody');
+  tb.innerHTML = changes.length ? changes.map(ch => `<tr>
+      <td><strong>${ch.floor}</strong></td>
+      <td>${ch.activity}</td>
+      <td>${ch.field}</td>
+      <td style="font-size:11px">${ch.oldValue||'—'} → <strong>${ch.newValue||'—'}</strong></td>
+    </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--warm)">No field-level changes detected</td></tr>';
+  document.getElementById('revise-fa-reason').value = '';
+  document.getElementById('revise-modal-fa').style.display = 'flex';
+}
+
+async function confirmReviseFA() {
+  const reason = document.getElementById('revise-fa-reason').value.trim();
+  if (!reason) { toast('A reason is required to save this revision','err'); return; }
+  if (!_reviseFACtx) return;
+  const btn = document.getElementById('revise-fa-confirm-btn'); btn.disabled = true;
+  try {
+    const {site, bld, rows} = _reviseFACtx;
+    const r = await apiCall('saveFlatActivitySchedule', {site, building:bld, rows, updatedBy:user.username, revisionReason:reason});
+    if (!r.ok) throw new Error(r.error);
+    document.getElementById('revise-modal-fa').style.display = 'none';
+    toast(`✓ Revision saved as v${r.version} — ${r.changeCount} field(s) changed for ${bld}, ${site}`,'ok');
+    loadExistingFA();
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false;
+}
+
+async function openVersionHistoryFA() {
+  const site=document.getElementById('fa-site').value, bld=document.getElementById('fa-bld').value;
+  if(!site||!bld) return;
+  document.getElementById('ver-hist-fa-bld').textContent = `${bld}, ${site}`;
+  document.getElementById('ver-hist-fa-preview').innerHTML = '';
+  const list = document.getElementById('ver-hist-fa-list');
+  list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--warm);font-size:12px">Loading…</div>';
+  document.getElementById('ver-hist-modal-fa').style.display = 'flex';
+  try {
+    const r = await apiGet('flatActivityVersions', {site, building:bld});
+    const versions = r.ok ? r.data : [];
+    if (!versions.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--warm);font-size:12px">No versions yet.</div>'; return; }
+    list.innerHTML = versions.slice().reverse().map(v => `
+      <div class="ver-hist-row" onclick="previewVersionFA('${site}','${bld}',${v.version})" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px">
+        <strong style="min-width:34px;color:var(--red)">v${v.version}</strong>
+        <span style="font-size:11px;flex:1">${v.reason||'—'}</span>
+        <span style="font-size:10px;color:var(--warm)">${v.savedBy||'—'} · ${fmtDateShort(v.savedAt)}</span>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = '<div style="padding:16px;color:var(--danger);font-size:12px">Could not load versions: '+e.message+'</div>'; }
+}
+
+async function previewVersionFA(site, bld, version) {
+  const preview = document.getElementById('ver-hist-fa-preview');
+  preview.innerHTML = '<div style="padding:10px;text-align:center;color:var(--warm);font-size:12px">Loading v'+version+'…</div>';
+  try {
+    const r = await apiGet('flatActivityVersionDetail', {site, building:bld, version});
+    if (!r.ok) throw new Error(r.error);
+    preview.innerHTML = `<div style="font-size:11px;font-weight:700;margin-bottom:6px">v${r.version} — floor × activity list as saved (${r.savedBy||'—'}, ${fmtDateShort(r.savedAt)})</div>
+      <table class="ml-tbl"><thead><tr><th>Floor</th><th>Activity</th><th>Start</th><th>End</th></tr></thead>
+      <tbody>${r.rows.map(row=>`<tr><td><strong>${row.floor}</strong></td><td>${row.activity}</td><td>${row.plannedStart||'—'}</td><td>${row.plannedEnd||'—'}</td></tr>`).join('')}</tbody></table>`;
+  } catch(e) { preview.innerHTML = '<div style="color:var(--danger);font-size:12px">'+e.message+'</div>'; }
 }
 
 // ── FLAT SCHEDULE ─────────────────────────────────────────────
@@ -1678,15 +2116,43 @@ async function loadDeviation() {
   }
   const siteFilter = siteSel.value;
   try {
-    const [baseR, flR, revR] = await Promise.all([
+    const [baseR, flR, revR, schR, faBaseR, faRevR, flatsR, flatSchR, faSchR] = await Promise.all([
       apiGet('allBaseline', {}),
       apiGet('allFloors', {days:365}),
-      apiGet('targetRevisions', {site: siteFilter})
+      apiGet('targetRevisions', {site: siteFilter}),
+      apiGet('allSchedule', {}),
+      apiGet('allFlatActivityBaseline', {}),
+      apiGet('flatActivityRevisions', {site: siteFilter}),
+      apiGet('allFlats', {days:365}),
+      apiGet('allFlatSchedule', {}),
+      apiGet('allFlatActivitySchedule', {})
     ]);
     let baseline = baseR.ok ? baseR.data : [];
     const floors = flR.ok ? flR.data : [];
     const revisions = revR.ok ? revR.data : [];
+    const schedule = schR.ok ? schR.data : [];
+    let faBaseline = faBaseR.ok ? faBaseR.data : [];
+    const faRevisions = faRevR.ok ? faRevR.data : [];
+    const flatProg = flatsR.ok ? flatsR.data : [];
+    const flatSch = flatSchR.ok ? flatSchR.data : [];
+    const faSchedule = faSchR.ok ? faSchR.data : [];
     if (siteFilter) baseline = baseline.filter(b => b.site === siteFilter);
+    if (siteFilter) faBaseline = faBaseline.filter(b => b.site === siteFilter);
+
+    // Current version per site|building — highest version number in the live schedule
+    const versionMap = {};
+    schedule.forEach(r => {
+      const k = r.site+'|'+r.building;
+      const v = parseInt(r.version)||1;
+      if (!versionMap[k] || v > versionMap[k]) versionMap[k] = v;
+    });
+
+    const faVersionMap = {};
+    faSchedule.forEach(r => {
+      const k = r.site+'|'+r.building;
+      const v = parseInt(r.version)||1;
+      if (!faVersionMap[k] || v > faVersionMap[k]) faVersionMap[k] = v;
+    });
 
     // Latest actual per site|building|floor
     const latest = {};
@@ -1737,7 +2203,9 @@ async function loadDeviation() {
         const wc = worst==='r'?'var(--danger)':worst==='a'?'var(--rag-a)':'var(--ok)';
         const div = document.createElement('div');
         div.className = 'ml-card'; div.style.marginBottom='14px';
+        const curVer = versionMap[g.site+'|'+g.building] || 1;
         div.innerHTML = `<div class="site-group-hdr">${g.site} — ${g.building}
+            <span onclick="jumpToVersionHistory('${g.site}','${g.building}')" style="cursor:pointer;font-size:10px;color:var(--charcoal);font-weight:700;background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:3px 9px;margin-left:10px" title="View version history">v${curVer}${curVer>1?' · '+(curVer-1)+' revision'+(curVer-1>1?'s':''):''}</span>
             <span style="margin-left:auto;font-size:10px;color:${wc};font-weight:700">${worst==='g'?'ON TRACK':worst==='a'?'SLIPPING':'BREACHED'}</span></div>
           <table class="ml-tbl">
             <thead><tr><th>Floor</th><th>Baseline Target</th><th>Target %</th><th>Actual %</th><th>Status</th><th>Deviation</th></tr></thead>
@@ -1760,6 +2228,104 @@ async function loadDeviation() {
     } else {
       revTb.innerHTML = revisions.slice().reverse().map(rv => `<tr>
         <td><strong>${rv.site}</strong></td><td>${rv.building}</td><td>${rv.floor}</td>
+        <td>${rv.field}</td>
+        <td style="font-size:11px">${rv.oldValue} → <strong>${rv.newValue}</strong></td>
+        <td style="font-size:11px;color:var(--warm)">${rv.reason}</td>
+        <td>${rv.revisedBy}</td>
+        <td style="font-size:11px">${fmtDateShort(rv.revisedAt)}</td>
+      </tr>`).join('');
+    }
+
+    // ── FLAT FINISHING ACTIVITY DEVIATION ─────────────────────
+    // Which flats exist on each floor (from FlatSchedule) — used to check
+    // whether EVERY flat on a floor has completed a given activity.
+    const flatsByFloor = {};
+    flatSch.forEach(f => {
+      const k = f.site+'|'+f.building+'|'+f.floor;
+      if (!flatsByFloor[k]) flatsByFloor[k] = [];
+      flatsByFloor[k].push(f.flat);
+    });
+
+    // Latest FlatProgress entry per site|building|floor|flat|activity
+    const faLatest = {};
+    flatProg.forEach(f => {
+      const k = [f.site,f.building,f.floor,f.flat,f.activity].join('|');
+      if (!faLatest[k] || f.date > faLatest[k].date) faLatest[k] = f;
+    });
+
+    let faOnTrack=0, faSlipping=0, faBreached=0;
+    const faGroups = {};
+    faBaseline.forEach(b => {
+      if (!b.plannedEnd) return;
+      const fk = b.site+'|'+b.building+'|'+b.floor;
+      const flatsHere = flatsByFloor[fk] || [];
+      let isDone = false, latestCompletionDate = null, completedCount = 0;
+      flatsHere.forEach(flatNo => {
+        const pk = [b.site,b.building,b.floor,flatNo,b.activity].join('|');
+        const entry = faLatest[pk];
+        if (entry && (entry.status === 'Completed' || (parseFloat(entry.pct)||0) >= 100)) {
+          completedCount++;
+          if (!latestCompletionDate || entry.date > latestCompletionDate) latestCompletionDate = entry.date;
+        }
+      });
+      isDone = flatsHere.length > 0 && completedCount === flatsHere.length;
+      let devDays = 0;
+      if (isDone) {
+        devDays = Math.round((new Date(latestCompletionDate) - new Date(b.plannedEnd)) / 86400000);
+      } else if (today > b.plannedEnd) {
+        devDays = Math.round((new Date(today) - new Date(b.plannedEnd)) / 86400000);
+      }
+      let cls;
+      if (devDays <= 0) { cls='g'; faOnTrack++; }
+      else if (devDays <= 14) { cls='a'; faSlipping++; }
+      else { cls='r'; faBreached++; }
+      const gk = b.site+'|'+b.building;
+      if (!faGroups[gk]) faGroups[gk] = {site:b.site, building:b.building, rows:[]};
+      faGroups[gk].rows.push({floor:b.floor, activity:b.activity, plannedEnd:b.plannedEnd,
+                              completedCount, totalFlats:flatsHere.length, isDone, devDays, cls});
+    });
+
+    document.getElementById('dev-fa-ontrack').textContent = faOnTrack;
+    document.getElementById('dev-fa-slipping').textContent = faSlipping;
+    document.getElementById('dev-fa-breached').textContent = faBreached;
+    document.getElementById('dev-fa-revisions').textContent = faRevisions.length;
+
+    const faBody = document.getElementById('dev-fa-body');
+    faBody.innerHTML = '';
+    const faGroupList = Object.values(faGroups);
+    if (!faGroupList.length) {
+      faBody.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm);font-size:12px">No flat activity baselines yet. Set a schedule in the Flat Activities tab — the first save becomes the baseline.</div>';
+    } else {
+      faGroupList.forEach(g => {
+        const worst = g.rows.some(r=>r.cls==='r') ? 'r' : g.rows.some(r=>r.cls==='a') ? 'a' : 'g';
+        const wc = worst==='r'?'var(--danger)':worst==='a'?'var(--rag-a)':'var(--ok)';
+        const div = document.createElement('div');
+        div.className = 'ml-card'; div.style.marginBottom='14px';
+        const curVer = faVersionMap[g.site+'|'+g.building] || 1;
+        div.innerHTML = `<div class="site-group-hdr">${g.site} — ${g.building}
+            <span style="font-size:10px;color:var(--charcoal);font-weight:700;background:var(--cream-d);border:1px solid var(--border);border-radius:2px;padding:3px 9px;margin-left:10px">v${curVer}${curVer>1?' · '+(curVer-1)+' revision'+(curVer-1>1?'s':''):''}</span>
+            <span style="margin-left:auto;font-size:10px;color:${wc};font-weight:700">${worst==='g'?'ON TRACK':worst==='a'?'SLIPPING':'BREACHED'}</span></div>
+          <table class="ml-tbl">
+            <thead><tr><th>Floor</th><th>Activity</th><th>Baseline Target</th><th>Flats Done</th><th>Status</th><th>Deviation</th></tr></thead>
+            <tbody>${g.rows.map(r => `<tr class="rag-row-${r.cls}">
+              <td><strong>${r.floor}</strong></td>
+              <td>${r.activity}</td>
+              <td>${r.plannedEnd}</td>
+              <td>${r.totalFlats ? r.completedCount+'/'+r.totalFlats : '—'}</td>
+              <td>${r.isDone?'Completed ✓':(r.totalFlats?'In progress':'No flats set')}</td>
+              <td style="font-weight:700;color:${r.cls==='r'?'var(--danger)':r.cls==='a'?'var(--rag-a)':'var(--ok)'}">${r.devDays<=0 ? (r.isDone?'On time':'On track') : '+' + r.devDays + ' days late'}</td>
+            </tr>`).join('')}</tbody>
+          </table>`;
+        faBody.appendChild(div);
+      });
+    }
+
+    const faRevTb = document.getElementById('dev-fa-rev-tbody');
+    if (!faRevisions.length) {
+      faRevTb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--warm)">No flat activity revisions — goalposts have not moved. Good.</td></tr>';
+    } else {
+      faRevTb.innerHTML = faRevisions.slice().reverse().map(rv => `<tr>
+        <td><strong>${rv.site}</strong></td><td>${rv.building}</td><td>${rv.floor}</td><td>${rv.activity}</td>
         <td>${rv.field}</td>
         <td style="font-size:11px">${rv.oldValue} → <strong>${rv.newValue}</strong></td>
         <td style="font-size:11px;color:var(--warm)">${rv.reason}</td>
