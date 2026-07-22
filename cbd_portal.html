@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Mangalam Landmarks — CBD Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --charcoal:#3a3a3a; --charcoal-dark:#2a2a2a; --red:#cc2a2a; --red-h:#b52424;
+  --cream:#faf8f5; --cream-d:#f0ece5; --warm:#8a8680; --light:#d8d4ce;
+  --border:#e2ddd8; --white:#ffffff;
+  --ok:#166534; --ok-bg:#f0fdf4; --warn:#92400e; --warn-bg:#fffbeb;
+  --danger:#991b1b; --danger-bg:#fff1f1; --blue:#1e40af; --blue-bg:#eff6ff;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--charcoal);min-height:100vh;display:flex;flex-direction:column}
+.ml-nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 40px;height:72px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+.ml-nav-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--charcoal-dark)}
+.ml-nav-center{display:flex;align-items:center;gap:6px;background:var(--cream);border:1px solid var(--border);border-radius:2px;padding:4px 10px}
+.ml-nav-role-text{font-size:11px;font-weight:600;color:var(--charcoal);letter-spacing:.5px}
+.ml-nav-role-sub{font-size:9px;color:var(--warm);letter-spacing:.5px;text-transform:uppercase}
+.ml-logout{font-size:10px;font-weight:500;color:var(--warm);background:none;border:1px solid var(--border);padding:6px 14px;border-radius:2px;cursor:pointer;font-family:'Jost',sans-serif;letter-spacing:.5px}
+.ml-logout:hover{border-color:var(--charcoal);color:var(--charcoal)}
+.ml-page-band{background:var(--charcoal-dark);padding:14px 40px;position:relative;overflow:hidden}
+.ml-page-band::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red) 0%,transparent 60%)}
+.ml-page-band-inner{max-width:1180px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between}
+.ml-page-eyebrow{font-size:9px;font-weight:500;color:var(--red);letter-spacing:3px;text-transform:uppercase;margin-bottom:3px}
+.ml-page-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--white)}
+.ml-page-sub{font-size:11px;color:rgba(255,255,255,.4);font-weight:300;margin-top:3px}
+.ml-tabs{background:var(--white);border-bottom:1px solid var(--border);padding:0 40px;display:flex;overflow-x:auto}
+.ml-tab{padding:14px 18px;font-size:11px;font-weight:500;color:var(--warm);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.ml-tab:hover{color:var(--charcoal)}
+.ml-tab.active{color:var(--charcoal);border-bottom-color:var(--red);font-weight:600}
+.ml-main{max-width:1180px;margin:0 auto;padding:28px 40px 60px;width:100%}
+.ml-tc{display:none}.ml-tc.active{display:block}
+.ml-card{background:var(--white);border:1px solid var(--border);border-radius:3px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+.ml-card-hdr{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--cream)}
+.ml-card-hdr-icon{width:24px;height:24px;border-radius:3px;background:var(--charcoal-dark);display:flex;align-items:center;justify-content:center;font-size:12px}
+.ml-card-hdr h3{font-size:11px;font-weight:600;color:var(--charcoal);text-transform:uppercase;letter-spacing:.8px}
+.ml-card-hdr span{font-size:10px;color:var(--warm);margin-left:auto}
+.ml-card-body{padding:18px}
+.ml-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.ml-field{display:flex;flex-direction:column;gap:5px}
+.ml-field label{font-size:10px;font-weight:600;color:var(--warm);text-transform:uppercase;letter-spacing:.8px}
+.ml-field input,.ml-field select,.ml-field textarea{border:1px solid var(--border);border-radius:2px;padding:9px 11px;font-family:'Jost',sans-serif;font-size:13px;color:var(--charcoal);background:var(--cream);outline:none}
+.ml-field input:focus,.ml-field select:focus{border-color:var(--charcoal);background:var(--white)}
+.ml-tbl{width:100%;border-collapse:collapse}
+.ml-tbl th{font-size:9px;font-weight:600;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;padding:9px 10px;border-bottom:1.5px solid var(--border);background:var(--cream);text-align:left}
+.ml-tbl td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.ml-tbl tr:hover td{background:var(--cream)}
+.chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;letter-spacing:.5px;text-transform:uppercase}
+.chip-ok{background:var(--ok-bg);color:var(--ok)}
+.chip-warn{background:var(--warn-bg);color:var(--warm)}
+.chip-danger{background:var(--danger-bg);color:var(--danger)}
+.chip-neutral{background:var(--cream-d);color:var(--warm)}
+.ml-kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-bottom:20px}
+.ml-kpi{background:var(--white);padding:16px 18px;position:relative}
+.ml-kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--charcoal)}
+.ml-kpi.red::after{background:var(--red)}
+.ml-kpi-label{font-size:9px;font-weight:600;color:var(--warm);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.ml-kpi-value{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:500;color:var(--charcoal);line-height:1}
+.ml-kpi-value.red{color:var(--red)}
+.ml-kpi-sub{font-size:9px;color:var(--warm);margin-top:3px}
+.ml-btn{background:var(--charcoal-dark);color:var(--white);border:none;border-radius:2px;padding:10px 22px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;position:relative}
+.ml-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)}
+.ml-btn:hover{background:var(--charcoal)}
+.ml-btn:disabled{background:var(--light);cursor:not-allowed}
+.ml-login-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:var(--charcoal-dark);padding:24px}
+.ml-login-card{background:var(--white);border-radius:3px;padding:44px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.ml-login-logo{text-align:center;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--charcoal-dark);margin-bottom:6px}
+.ml-login-divider{width:32px;height:1px;background:var(--red);margin:14px auto 20px}
+.ml-login-role{text-align:center;font-size:10px;font-weight:500;color:var(--warm);letter-spacing:2px;text-transform:uppercase;margin-bottom:24px}
+.ml-login-err{background:var(--danger-bg);color:var(--danger);border-radius:2px;border-left:3px solid var(--red);padding:10px 14px;font-size:12px;margin-top:12px;display:none}
+.ml-toast{position:fixed;top:80px;right:24px;z-index:999;background:var(--charcoal-dark);color:var(--white);padding:12px 18px;border-radius:2px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translateX(130%);transition:transform .3s ease;max-width:320px;border-left:3px solid var(--red)}
+.ml-toast.show{transform:translateX(0)}
+.ml-toast.err{background:var(--danger);border-left-color:#fff}
+.ml-toast.ok{background:var(--ok);border-left-color:#fff}
+.ml-footer{background:var(--white);border-top:1px solid var(--border);padding:14px 40px;display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.ml-footer-text{font-size:10px;color:var(--light);letter-spacing:.5px}
+.note-box{background:var(--cream-d);border-left:3px solid var(--red);border-radius:2px;padding:10px 14px;font-size:10.5px;color:var(--warm);margin-bottom:14px}
+@media(max-width:768px){.ml-nav,.ml-page-band,.ml-tabs,.ml-main{padding-left:18px;padding-right:18px}.ml-grid-4{grid-template-columns:1fr 1fr}.ml-kpi-strip{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" style="display:flex;flex-direction:column;min-height:100vh">
+  <nav class="ml-nav"><div class="ml-nav-logo">Mangalam Landmarks</div><div style="font-size:10px;color:var(--warm);letter-spacing:1px;text-transform:uppercase">Internal Portal</div></nav>
+  <div class="ml-login-wrap">
+    <div class="ml-login-card">
+      <div class="ml-login-logo">Mangalam Landmarks</div>
+      <div class="ml-login-divider"></div>
+      <div class="ml-login-role">📦 &nbsp; CBD Portal — Contract &amp; Billing</div>
+      <div class="ml-field" style="margin-bottom:12px"><label>Username</label><input type="text" id="lu" placeholder="e.g. cbd_pune" autocomplete="username"/></div>
+      <div class="ml-field" style="margin-bottom:16px"><label>Password</label><input type="password" id="lp" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button class="ml-btn" style="width:100%" id="lbtn" onclick="doLogin()">Sign In</button>
+      <div class="ml-login-err" id="lerr"></div>
+      <div style="text-align:center;font-size:10px;color:var(--light);margin-top:14px">Contact RP or SSS to reset your credentials</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh">
+  <nav class="ml-nav">
+    <div class="ml-nav-logo">Mangalam Landmarks</div>
+    <div class="ml-nav-center"><span style="font-size:16px">📦</span><div><div class="ml-nav-role-text" id="hname">CBD</div><div class="ml-nav-role-sub">Contract &amp; Billing</div></div></div>
+    <button class="ml-logout" onclick="doLogout()">Sign Out</button>
+  </nav>
+
+  <div class="ml-page-band">
+    <div class="ml-page-band-inner">
+      <div><div class="ml-page-eyebrow">CBD · Labor Arrangement</div><div class="ml-page-title">Labor Requirements &amp; Arrangement</div><div class="ml-page-sub">Fulfil site labor requests raised by Project Managers</div></div>
+      <div style="font-size:10px;color:rgba(255,255,255,.35)" id="band-date"></div>
+    </div>
+  </div>
+
+  <div class="ml-tabs">
+    <div class="ml-tab active" onclick="stab('queue',this);loadQueue()">📋 Open Requirements <span id="q-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px"></span></div>
+    <div class="ml-tab" onclick="stab('log',this);loadLog()">📝 Arrangement Log</div>
+  </div>
+
+  <div class="ml-main">
+
+    <div class="ml-tc active" id="tab-queue">
+      <div class="note-box">Requirements below are raised by PMs against their weekly commitment plans. Log what you've arranged against each — the PM will cross-verify your count against actual labor on site.</div>
+
+      <div class="ml-kpi-strip" id="q-kpis">
+        <div class="ml-kpi"><div class="ml-kpi-label">Open Requirements</div><div class="ml-kpi-value" id="kpi-open">—</div><div class="ml-kpi-sub">across all sites</div></div>
+        <div class="ml-kpi red"><div class="ml-kpi-label">Unfulfilled</div><div class="ml-kpi-value red" id="kpi-unfulfilled">—</div><div class="ml-kpi-sub">zero arranged so far</div></div>
+        <div class="ml-kpi"><div class="ml-kpi-label">Partially Arranged</div><div class="ml-kpi-value" id="kpi-partial">—</div><div class="ml-kpi-sub">below required count</div></div>
+        <div class="ml-kpi"><div class="ml-kpi-label">Total Labor Required</div><div class="ml-kpi-value" id="kpi-total-req">—</div><div class="ml-kpi-sub">summed across open items</div></div>
+      </div>
+
+      <div class="ml-field" style="max-width:260px;margin-bottom:14px"><label>Filter by Site</label><select id="q-site-filter" onchange="loadQueue()"><option value="">All Sites</option></select></div>
+
+      <div id="q-body"></div>
+    </div>
+
+    <div class="ml-tc" id="tab-log">
+      <div class="ml-card"><div class="ml-card-hdr"><div class="ml-card-hdr-icon">📝</div><h3>Recent Arrangements</h3><span id="log-count"></span></div>
+        <table class="ml-tbl">
+          <thead><tr><th>Date</th><th>Site</th><th>Skill</th><th>Arranged</th><th>Vendor / Contractor</th><th>Requirement Ref</th></tr></thead>
+          <tbody id="log-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="ml-footer"><div class="ml-footer-text">Mangalam Landmarks LLP · CBD Portal · Confidential</div><div class="ml-footer-text" id="footer-date"></div></footer>
+</div>
+
+<!-- ARRANGE MODAL -->
+<div id="arrange-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--white);border-radius:3px;padding:28px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:14px;color:var(--charcoal)">Log Labor Arrangement</div>
+    <div id="arrange-context" style="font-size:11px;color:var(--warm);margin-bottom:14px;padding:8px 12px;background:var(--cream-d);border-radius:2px"></div>
+    <div class="ml-field" style="margin-bottom:12px"><label>Date Arranged</label><input type="date" id="am-date"/></div>
+    <div class="ml-field" style="margin-bottom:12px"><label>Number Arranged</label><input type="number" min="0" id="am-count"/></div>
+    <div class="ml-field" style="margin-bottom:16px"><label>Contractor / Vendor</label><input type="text" id="am-vendor" placeholder="e.g. Patil Labour Contractor"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeArrangeModal()" style="background:none;border:1px solid var(--border);border-radius:2px;padding:10px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--charcoal)">Cancel</button>
+      <button class="ml-btn" id="am-submit" onclick="submitArrangement()">Save Arrangement</button>
+    </div>
+  </div>
+</div>
+
+<div class="ml-toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   BACKEND NOTE (read this before wiring up):
+   This portal calls the SAME Apps Script endpoint as your PM/CEO
+   portals, using NEW action names that don't exist there yet:
+     - login                    (existing — role must return 'cbd')
+     - laborRequirementsQueue   (GET)  -> open PM labor requirements
+     - laborArrangementLog      (GET)  -> arrangement history
+     - submitLaborArrangement   (POST) -> log an arrangement
+   Until those are added server-side, the Requirements/Log views will
+   show a "not connected yet" state rather than fail silently.
+   ===================================================================== */
+const API = 'https://script.google.com/macros/s/AKfycbw7q3Z1BTbiBsnNmquV7WxjXEDeN-3vhhm4YCOiOob4UvpOQ71KJ4LDqoUhUGePWwm0/exec';
+let _cbIdx = 0;
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + (++_cbIdx) + '_' + Date.now();
+    const sep = url.includes('?') ? '&' : '?';
+    const s = document.createElement('script');
+    const timer = setTimeout(() => { delete window[cb]; s.remove(); reject(new Error('Timeout')); }, 20000);
+    window[cb] = data => { clearTimeout(timer); delete window[cb]; s.remove(); resolve(data); };
+    s.src = url + sep + 'callback=' + cb;
+    s.onerror = () => { clearTimeout(timer); delete window[cb]; s.remove(); reject(new Error('Script error')); };
+    document.head.appendChild(s);
+  });
+}
+async function apiCall(action, payload) {
+  const res = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action, payload: payload||{} }) });
+  return res.json();
+}
+function apiGet(action, params) {
+  let url = API + '?action=' + action;
+  if (params) Object.keys(params).forEach(k => url += '&' + k + '=' + encodeURIComponent(params[k]));
+  return jsonp(url);
+}
+let _toast_t;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'ml-toast show' + (type ? ' '+type : '');
+  clearTimeout(_toast_t); _toast_t = setTimeout(() => el.className='ml-toast', 4000);
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function stab(id, el) {
+  document.querySelectorAll('.ml-tc').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.ml-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+const SK = 'ml_cbd_portal';
+let user = null, queue = [], SITES = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem(SK);
+  if (saved) { user = JSON.parse(saved); showApp(); }
+  document.getElementById('band-date').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('footer-date').textContent = '© Mangalam Landmarks LLP ' + new Date().getFullYear();
+});
+
+async function doLogin() {
+  const u = document.getElementById('lu').value.trim();
+  const p = document.getElementById('lp').value;
+  const errEl = document.getElementById('lerr');
+  errEl.style.display = 'none';
+  if (!u||!p) return;
+  const btn = document.getElementById('lbtn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const r = await apiGet('login', {username:u, password:p});
+    if (!r.ok) throw new Error(r.error || 'Invalid credentials');
+    if (r.role !== 'cbd') throw new Error('This portal is for CBD (Contract & Billing) accounts only');
+    user = r; sessionStorage.setItem(SK, JSON.stringify(r));
+    showApp();
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'Sign In';
+}
+
+function doLogout() {
+  sessionStorage.removeItem(SK); user = null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login').style.display='flex';
+}
+
+async function showApp() {
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('hname').textContent = user.name || user.username;
+  try {
+    const r = await apiGet('sites', {});
+    SITES = r.ok ? r.data.map(s=>s.site) : [];
+  } catch(e) { SITES = []; }
+  const sel = document.getElementById('q-site-filter');
+  sel.innerHTML = '<option value="">All Sites</option>' + SITES.map(s=>`<option>${s}</option>`).join('');
+  loadQueue();
+}
+
+async function loadQueue() {
+  const site = document.getElementById('q-site-filter').value;
+  const body = document.getElementById('q-body');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm);font-size:12px">Loading...</div>';
+  try {
+    const r = await apiGet('laborRequirementsQueue', site ? {site} : {});
+    if (!r.ok) throw new Error(r.error || 'Not connected');
+    queue = r.data || [];
+    renderQueue();
+  } catch(e) {
+    body.innerHTML = `<div class="ml-card"><div class="ml-card-body" style="text-align:center;padding:30px">
+      <div style="font-size:13px;color:var(--warm);margin-bottom:8px">Requirements queue isn't connected yet.</div>
+      <div style="font-size:11px;color:var(--light)">The backend needs a <code>laborRequirementsQueue</code> action added — see the note at the top of this page's script.</div>
+    </div></div>`;
+    document.getElementById('kpi-open').textContent='—';
+    document.getElementById('kpi-unfulfilled').textContent='—';
+    document.getElementById('kpi-partial').textContent='—';
+    document.getElementById('kpi-total-req').textContent='—';
+  }
+}
+
+function renderQueue() {
+  const open = queue.filter(q => (q.arrangedCount||0) < q.required);
+  const unfulfilled = open.filter(q => (q.arrangedCount||0) === 0);
+  const partial = open.filter(q => (q.arrangedCount||0) > 0);
+  const totalReq = open.reduce((a,q)=>a+(q.required||0),0);
+  document.getElementById('kpi-open').textContent = open.length;
+  document.getElementById('kpi-unfulfilled').textContent = unfulfilled.length;
+  document.getElementById('kpi-partial').textContent = partial.length;
+  document.getElementById('kpi-total-req').textContent = totalReq;
+  document.getElementById('q-badge').style.display = open.length ? 'inline' : 'none';
+  document.getElementById('q-badge').textContent = open.length;
+
+  const body = document.getElementById('q-body');
+  if (!queue.length) {
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm);font-size:12px">No labor requirements at the moment.</div>';
+    return;
+  }
+  body.innerHTML = `<div class="ml-card"><table class="ml-tbl">
+    <thead><tr><th>Site</th><th>Period</th><th>Skill</th><th>Required</th><th>Arranged</th><th>Task / Reason</th><th>Status</th><th></th></tr></thead>
+    <tbody>${queue.map((q,i)=>{
+      const arranged = q.arrangedCount||0;
+      const status = arranged===0 ? 'Pending' : arranged>=q.required ? 'Fulfilled' : 'Partial';
+      const cls = status==='Fulfilled'?'chip-ok':status==='Pending'?'chip-danger':'chip-warn';
+      return `<tr>
+        <td><strong>${q.site}</strong></td><td>${q.period||''}</td><td>${q.skill}</td>
+        <td>${q.required}</td><td>${arranged}</td><td>${q.task||''}</td>
+        <td><span class="chip ${cls}">${status}</span></td>
+        <td>${status!=='Fulfilled' ? `<button class="ml-btn" style="padding:6px 12px;font-size:10px" onclick="openArrangeModal(${i})">+ Arrange</button>` : '—'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+let arrangeIdx = null;
+
+function openArrangeModal(idx) {
+  arrangeIdx = idx;
+  const q = queue[idx];
+  document.getElementById('arrange-context').innerHTML = `<strong>${q.site}</strong> — ${q.skill} — ${q.task||''}<br/>Required: ${q.required} · Already arranged: ${q.arrangedCount||0}`;
+  document.getElementById('am-date').value = todayStr();
+  document.getElementById('am-count').value = Math.max(0, q.required - (q.arrangedCount||0));
+  document.getElementById('am-vendor').value = '';
+  document.getElementById('arrange-modal').style.display = 'flex';
+}
+function closeArrangeModal() { document.getElementById('arrange-modal').style.display = 'none'; arrangeIdx = null; }
+
+async function submitArrangement() {
+  if (arrangeIdx === null) return;
+  const q = queue[arrangeIdx];
+  const date = document.getElementById('am-date').value;
+  const count = parseInt(document.getElementById('am-count').value||0);
+  const vendor = document.getElementById('am-vendor').value.trim();
+  if (!date || !count || !vendor) { toast('Fill all fields','err'); return; }
+  const btn = document.getElementById('am-submit');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await apiCall('submitLaborArrangement', {
+      requirementId: q.id, site: q.site, skill: q.skill,
+      date, count, vendor, submittedBy: user.username
+    });
+    if (!r.ok) throw new Error(r.error || 'Not connected — backend action missing');
+    toast('✓ Arrangement logged','ok');
+    closeArrangeModal();
+    loadQueue();
+  } catch(e) { toast(e.message,'err'); }
+  btn.disabled = false; btn.textContent = 'Save Arrangement';
+}
+
+async function loadLog() {
+  const body = document.getElementById('log-body');
+  body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--warm)">Loading...</td></tr>';
+  try {
+    const r = await apiGet('laborArrangementLog', {username:user.username});
+    if (!r.ok) throw new Error(r.error || 'Not connected');
+    const data = r.data || [];
+    document.getElementById('log-count').textContent = data.length + ' entries';
+    body.innerHTML = data.length ? [...data].reverse().map(d=>`<tr>
+      <td>${d.date}</td><td><strong>${d.site}</strong></td><td>${d.skill}</td><td>${d.count}</td><td>${d.vendor}</td><td style="font-size:10px;color:var(--warm)">${d.requirementId||'—'}</td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--warm)">No arrangements logged yet</td></tr>';
+  } catch(e) {
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--warm)">Arrangement log isn't connected yet — needs a <code>laborArrangementLog</code> backend action.</td></tr>`;
+  }
+}
+</script>
+</body>
+</html>
