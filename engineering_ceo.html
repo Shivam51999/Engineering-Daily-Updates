@@ -858,15 +858,40 @@ async function renderLaborDemandSupply() {
     const r = await apiGet('laborDemandSupply', {});
     if (!r.ok) throw new Error(r.error || 'Not connected');
     laborDemandSupplyData = r.data || [];
+    renderLaborDemandSupplySummary();
     renderLaborDemandSupplyTable();
   } catch(e) {
     laborDemandSupplyData = [];
     tb.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">Demand vs Availability isn't connected yet — needs the <code>laborDemandSupply</code> backend action.</td></tr>`;
+    document.getElementById('lab-ds-summary-body').innerHTML =
+      '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">Not connected yet.</td></tr>';
   }
+}
+
+const LAB_DS_PERIOD_LABELS = {daily:'Today', weekly:'This Week (Mon–Sun)', monthly:'This Calendar Month', tillDate:'Since the Beginning'};
+
+function renderLaborDemandSupplySummary() {
+  const body = document.getElementById('lab-ds-summary-body');
+  if (!laborDemandSupplyData.length) {
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">No labor requirement/arrangement data yet.</td></tr>';
+    return;
+  }
+  const periods = ['daily','weekly','monthly','tillDate'];
+  body.innerHTML = periods.map(p => {
+    const demanded = laborDemandSupplyData.reduce((a,d) => a + d[p].demanded, 0);
+    const available = laborDemandSupplyData.reduce((a,d) => a + d[p].available, 0);
+    const gap = demanded - available;
+    const gapColor = gap > 0 ? 'var(--danger)' : gap < 0 ? 'var(--rag-a)' : 'var(--ok)';
+    const gapLabel = gap > 0 ? '−' + gap + ' short' : gap < 0 ? '+' + Math.abs(gap) + ' surplus' : 'Matched';
+    const fulfil = demanded > 0 ? Math.round(available / demanded * 100) : (available > 0 ? 100 : 0);
+    return `<tr><td><strong>${LAB_DS_PERIOD_LABELS[p]}</strong></td><td>${demanded}</td><td>${available}</td>
+      <td style="color:${gapColor};font-weight:700">${gapLabel}</td><td>${fulfil}%</td></tr>`;
+  }).join('');
 }
 
 function renderLaborDemandSupplyTable() {
   const period = document.getElementById('lab-ds-period').value;
+  document.getElementById('lab-ds-period-label').textContent = LAB_DS_PERIOD_LABELS[period];
   const tb = document.getElementById('lab-ds-body');
   if (!laborDemandSupplyData.length) {
     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">No labor requirement/arrangement data yet.</td></tr>';
