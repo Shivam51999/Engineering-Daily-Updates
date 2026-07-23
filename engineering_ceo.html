@@ -247,7 +247,7 @@ canvas{max-height:220px}
   <div class="ml-tab active" onclick="stab('portfolio',this)">🗂️ Portfolio</div>
   <div class="ml-tab" onclick="stab('timeline',this);renderTimeline()">📅 Timeline RAG</div>
   <div class="ml-tab" onclick="stab('league',this);renderLeague()">🏆 League Table</div>
-  <div class="ml-tab" onclick="stab('labor',this);renderLabor()">👷 Labor &amp; Manpower</div>
+  <div class="ml-tab" onclick="stab('labor',this);renderLabor();renderLaborDemandSupply()">👷 Labor &amp; Manpower</div>
   <div class="ml-tab" onclick="stab('floors',this)">📐 Floor Progress</div>
   <div class="ml-tab" onclick="stab('materials',this)">📦 Materials</div>
   <div class="ml-tab" onclick="stab('quality',this)">🔍 Quality</div>
@@ -848,6 +848,39 @@ function renderLeague() {
 
 // ── LABOR & MANPOWER ─────────────────────────────────────────────────────────
 function fmtInrCeo(n){ return "₹" + Math.round(n||0).toLocaleString('en-IN'); }
+
+let laborDemandSupplyData = [];
+
+async function renderLaborDemandSupply() {
+  const tb = document.getElementById('lab-ds-body');
+  tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">Loading...</td></tr>';
+  try {
+    const r = await apiGet('laborDemandSupply', {});
+    if (!r.ok) throw new Error(r.error || 'Not connected');
+    laborDemandSupplyData = r.data || [];
+    renderLaborDemandSupplyTable();
+  } catch(e) {
+    laborDemandSupplyData = [];
+    tb.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">Demand vs Availability isn't connected yet — needs the <code>laborDemandSupply</code> backend action.</td></tr>`;
+  }
+}
+
+function renderLaborDemandSupplyTable() {
+  const period = document.getElementById('lab-ds-period').value;
+  const tb = document.getElementById('lab-ds-body');
+  if (!laborDemandSupplyData.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--warm)">No labor requirement/arrangement data yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = laborDemandSupplyData.map(d => {
+    const p = d[period];
+    const gapColor = p.gap > 0 ? 'var(--danger)' : p.gap < 0 ? 'var(--rag-a)' : 'var(--ok)';
+    const gapLabel = p.gap > 0 ? '−' + p.gap + ' short' : p.gap < 0 ? '+' + Math.abs(p.gap) + ' surplus' : 'Matched';
+    const fulfil = p.demanded > 0 ? Math.round(p.available / p.demanded * 100) : (p.available > 0 ? 100 : 0);
+    return `<tr><td><strong>${d.site}</strong></td><td>${p.demanded}</td><td>${p.available}</td>
+      <td style="color:${gapColor};font-weight:700">${gapLabel}</td><td>${fulfil}%</td></tr>`;
+  }).join('');
+}
 
 async function renderLabor() {
   try {
