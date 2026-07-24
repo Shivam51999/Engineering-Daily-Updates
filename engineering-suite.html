@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Engineering Suite — Mangalam HQ</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#E83131;--red-dark:#C42020;--red-light:#FEF0F0;
+  --charcoal:#2B2B2B;--text-body:#555;--text-muted:#888;
+  --white:#FFF;--off-white:#F9F8F6;
+  --border:rgba(0,0,0,.08);--border-med:rgba(0,0,0,.14);
+  --shadow-sm:0 1px 4px rgba(0,0,0,.06);--shadow-md:0 4px 20px rgba(0,0,0,.09);
+  --navy:#1A3F6F;--navy-l:#EAF0F8;
+  --gold:#B8922A;--gold-l:#FAF3E3;
+  --teal:#0F6E56;--teal-l:#E1F5EE;
+  --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',-apple-system,Arial,sans-serif;background:var(--off-white);color:var(--charcoal);min-height:100vh;font-size:15px;line-height:1.65}
+.nav{background:var(--white);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 40px;position:sticky;top:0;z-index:100;gap:16px}
+.nav-back{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--text-body);font-size:13px;font-weight:600;padding:7px 12px;border-radius:var(--r-sm);transition:background .15s}
+.nav-back:hover{background:var(--off-white);color:var(--charcoal)}
+.nav-div{width:1px;height:22px;background:var(--border-med)}
+.nav-tag{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--text-muted);font-weight:600}
+.nav-clock{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
+.dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero{background:var(--white);border-bottom:1px solid var(--border);padding:48px 40px 40px}
+.hero-in{max-width:1000px;margin:0 auto}
+.hero-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:16px}
+.hero-tag::before{content:'';width:20px;height:2px;background:var(--red);border-radius:1px}
+.hero-h1{font-size:38px;line-height:1.15;color:var(--charcoal);font-weight:300;letter-spacing:-.5px;margin-bottom:12px}
+.hero-h1 strong{font-weight:700}
+.hero-sub{font-size:15px;color:var(--text-body);max-width:620px;line-height:1.7}
+.main{max-width:1000px;margin:0 auto;padding:40px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;text-decoration:none;color:inherit;cursor:pointer;box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.stripe{height:3px}
+.c-navy .stripe{background:var(--navy)}.c-gold .stripe{background:var(--gold)}
+.cb{padding:24px 24px;flex:1;display:flex;flex-direction:column;gap:12px}
+.ctop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cico{width:44px;height:44px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.c-navy .cico{background:var(--navy-l);color:var(--navy)}.c-gold .cico{background:var(--gold-l);color:var(--gold)}
+.cpill{font-size:10.5px;padding:3px 10px;border-radius:12px;border:1px solid;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:600}
+.c-navy .cpill{background:var(--navy-l);color:var(--navy);border-color:rgba(26,63,111,.2)}
+.c-gold .cpill{background:var(--gold-l);color:#8B6B1A;border-color:rgba(184,146,42,.2)}
+.cname{font-size:18px;font-weight:700;color:var(--charcoal)}
+.cdesc{font-size:13.5px;color:var(--text-body);line-height:1.6}
+.ctags{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:6px}
+.tag{font-size:11px;padding:3px 9px;background:var(--off-white);border:1px solid var(--border-med);border-radius:4px;color:var(--text-muted)}
+.cfoot{padding:13px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12px;background:var(--off-white)}
+.cfoot-l{color:var(--text-muted)}
+.cfoot-l strong{color:var(--charcoal);font-weight:700}
+.cbtn{font-size:12px;font-weight:700;padding:6px 14px;border-radius:var(--r-sm);border:1px solid;text-decoration:none;display:flex;align-items:center;gap:5px;background:none}
+.c-navy .cbtn{color:var(--navy);border-color:rgba(26,63,111,.3);background:var(--navy-l)}
+.c-gold .cbtn{color:#8B6B1A;border-color:rgba(184,146,42,.3);background:var(--gold-l)}
+.note{max-width:1000px;margin:0 auto;padding:0 40px 40px;font-size:12.5px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Mangalam HQ
+  </a>
+  <div class="nav-div"></div>
+  <span class="nav-tag">Engineering Suite</span>
+  <div class="nav-clock"><div class="dot"></div><span id="clk"></span></div>
+</nav>
+
+<section class="hero">
+  <div class="hero-in">
+    <div class="hero-tag">Mangalam HQ &nbsp;&middot;&nbsp; Engineering</div>
+    <h1 class="hero-h1">Engineering <strong>Suite.</strong></h1>
+    <p class="hero-sub">Daily site delivery and labor intelligence, in one folder — quality, safety, store and admin logs from every active site, plus PM-raised labor requirements, CBD-arranged supply, cross-verification and site profitability ranking.</p>
+  </div>
+</section>
+
+<main class="main">
+  <div class="grid">
+
+    <!-- ENGINEERING PORTAL -->
+    <a href="https://engineering-daily-updates.vercel.app" target="_blank" class="card c-navy" id="engineering-portal-card">
+      <div class="stripe"></div>
+      <div class="cb">
+        <div class="ctop">
+          <div class="cico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20M17 20V4a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v16"/><path d="M12 9h.01"/><path d="M7 20v-4h10v4"/></svg></div>
+          <span class="cpill">Live</span>
+        </div>
+        <div class="cname">Engineering Portal</div>
+        <div class="cdesc">Daily site updates — quality checks, safety, store and admin across all active construction sites.</div>
+        <div class="ctags"><span class="tag">Quality</span><span class="tag">Safety</span><span class="tag">Store</span><span class="tag">Admin</span><span class="tag">Daily Log</span></div>
+      </div>
+      <div class="cfoot">
+        <span class="cfoot-l">16+ active sites &middot; <strong>Jigyasa-powered</strong></span>
+        <span class="cbtn">Open Portal <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+      </div>
+    </a>
+
+    <!-- LABOR INTELLIGENCE -->
+    <a href="https://labor-intelligence.vercel.app/" target="_blank" class="card c-gold" id="labor-intelligence-card">
+      <div class="stripe"></div>
+      <div class="cb">
+        <div class="ctop">
+          <div class="cico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <span class="cpill">New</span>
+        </div>
+        <div class="cname">Labor Intelligence</div>
+        <div class="cdesc">Labor benchmarking against tasks — PM requirements by trade &amp; mason, CBD-arranged supply, cross-verification, demand-supply gaps and site profitability ranking.</div>
+        <div class="ctags"><span class="tag">PM Requirement</span><span class="tag">CBD Supply</span><span class="tag">Cross-Verify</span><span class="tag">Profitability</span></div>
+      </div>
+      <div class="cfoot">
+        <span class="cfoot-l">PM / CBD / CEO views &middot; <strong>Jigyasa-powered</strong></span>
+        <span class="cbtn">Open Tool <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<p class="note">Both tools feed live data into Jigyasa — ask about site delivery status, labor demand-supply gaps or site profitability from the HQ home page without opening either tool directly.</p>
+
+<script>
+function tick(){
+  var t=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date());
+  var e=document.getElementById('clk'); if(e) e.textContent=t+' IST';
+}
+tick(); setInterval(tick,1000);
+</script>
+</body>
+</html>
