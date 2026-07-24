@@ -3,134 +3,233 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Engineering Suite — Mangalam HQ</title>
+<title>Mangalam Landmarks — Engineering Dashboard Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --red:#E83131;--red-dark:#C42020;--red-light:#FEF0F0;
-  --charcoal:#2B2B2B;--text-body:#555;--text-muted:#888;
-  --white:#FFF;--off-white:#F9F8F6;
-  --border:rgba(0,0,0,.08);--border-med:rgba(0,0,0,.14);
-  --shadow-sm:0 1px 4px rgba(0,0,0,.06);--shadow-md:0 4px 20px rgba(0,0,0,.09);
-  --navy:#1A3F6F;--navy-l:#EAF0F8;
-  --gold:#B8922A;--gold-l:#FAF3E3;
-  --teal:#0F6E56;--teal-l:#E1F5EE;
-  --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;
+:root {
+  --charcoal:#3a3a3a; --charcoal-dark:#2a2a2a; --red:#cc2a2a; --red-h:#b52424;
+  --cream:#faf8f5; --cream-d:#f0ece5; --warm:#8a8680; --light:#d8d4ce;
+  --border:#e2ddd8; --white:#ffffff;
+  --ok:#166534; --ok-bg:#f0fdf4; --warn:#92400e; --warn-bg:#fffbeb; --danger:#b91c1c;
 }
-html{scroll-behavior:smooth}
-body{font-family:'Segoe UI',-apple-system,Arial,sans-serif;background:var(--off-white);color:var(--charcoal);min-height:100vh;font-size:15px;line-height:1.65}
-.nav{background:var(--white);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 40px;position:sticky;top:0;z-index:100;gap:16px}
-.nav-back{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--text-body);font-size:13px;font-weight:600;padding:7px 12px;border-radius:var(--r-sm);transition:background .15s}
-.nav-back:hover{background:var(--off-white);color:var(--charcoal)}
-.nav-div{width:1px;height:22px;background:var(--border-med)}
-.nav-tag{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--text-muted);font-weight:600}
-.nav-clock{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
-.dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.hero{background:var(--white);border-bottom:1px solid var(--border);padding:48px 40px 40px}
-.hero-in{max-width:1000px;margin:0 auto}
-.hero-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:16px}
-.hero-tag::before{content:'';width:20px;height:2px;background:var(--red);border-radius:1px}
-.hero-h1{font-size:38px;line-height:1.15;color:var(--charcoal);font-weight:300;letter-spacing:-.5px;margin-bottom:12px}
-.hero-h1 strong{font-weight:700}
-.hero-sub{font-size:15px;color:var(--text-body);max-width:620px;line-height:1.7}
-.main{max-width:1000px;margin:0 auto;padding:40px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
-@media(max-width:760px){.grid{grid-template-columns:1fr}}
-.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;text-decoration:none;color:inherit;cursor:pointer;box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s}
-.card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
-.stripe{height:3px}
-.c-navy .stripe{background:var(--navy)}.c-gold .stripe{background:var(--gold)}
-.cb{padding:24px 24px;flex:1;display:flex;flex-direction:column;gap:12px}
-.ctop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.cico{width:44px;height:44px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.c-navy .cico{background:var(--navy-l);color:var(--navy)}.c-gold .cico{background:var(--gold-l);color:var(--gold)}
-.cpill{font-size:10.5px;padding:3px 10px;border-radius:12px;border:1px solid;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:600}
-.c-navy .cpill{background:var(--navy-l);color:var(--navy);border-color:rgba(26,63,111,.2)}
-.c-gold .cpill{background:var(--gold-l);color:#8B6B1A;border-color:rgba(184,146,42,.2)}
-.cname{font-size:18px;font-weight:700;color:var(--charcoal)}
-.cdesc{font-size:13.5px;color:var(--text-body);line-height:1.6}
-.ctags{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:6px}
-.tag{font-size:11px;padding:3px 9px;background:var(--off-white);border:1px solid var(--border-med);border-radius:4px;color:var(--text-muted)}
-.cfoot{padding:13px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12px;background:var(--off-white)}
-.cfoot-l{color:var(--text-muted)}
-.cfoot-l strong{color:var(--charcoal);font-weight:700}
-.cbtn{font-size:12px;font-weight:700;padding:6px 14px;border-radius:var(--r-sm);border:1px solid;text-decoration:none;display:flex;align-items:center;gap:5px;background:none}
-.c-navy .cbtn{color:var(--navy);border-color:rgba(26,63,111,.3);background:var(--navy-l)}
-.c-gold .cbtn{color:#8B6B1A;border-color:rgba(184,146,42,.3);background:var(--gold-l)}
-.note{max-width:1000px;margin:0 auto;padding:0 40px 40px;font-size:12.5px;color:var(--text-muted)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--charcoal);min-height:100vh}
+a{text-decoration:none;color:inherit}
+
+/* ── HERO ── */
+.hero{background:var(--charcoal-dark);padding:56px 40px 64px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red) 0%,transparent 55%)}
+.hero-inner{max-width:1180px;margin:0 auto}
+.wordmark{display:flex;align-items:baseline;gap:10px;margin-bottom:36px}
+.wordmark-mark{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--white);letter-spacing:.5px}
+.wordmark-sub{font-size:9px;font-weight:500;color:rgba(255,255,255,.35);letter-spacing:2.5px;text-transform:uppercase}
+
+.hub-date{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:2px;padding:9px 16px;margin-bottom:32px}
+.hub-date-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hub-date-text{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.6px;text-transform:uppercase}
+.hub-date-val{font-size:11px;color:rgba(255,255,255,.75);font-weight:500}
+
+.hero-eyebrow{font-size:10px;font-weight:600;color:var(--red);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:400;color:var(--white);letter-spacing:-.5px;line-height:1.08}
+.hero-title strong{font-weight:600;color:var(--white)}
+.hero-sub{font-size:14px;color:rgba(255,255,255,.5);margin-top:16px;max-width:560px;line-height:1.6;font-weight:300}
+
+/* ── BODY ── */
+.hub-body{max-width:1180px;margin:0 auto;padding:48px 40px 64px}
+.section-label{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.section-label::before{content:'';display:block;width:3px;height:14px;background:var(--red);border-radius:1px;flex-shrink:0}
+.section-label h2{font-size:11px;font-weight:600;color:var(--charcoal);text-transform:uppercase;letter-spacing:1.2px}
+.section-label span{font-size:10px;color:var(--warm);margin-left:auto}
+
+/* CEO card — full width, dark, primary entry point */
+.ceo-card{display:flex;background:var(--charcoal-dark);border-radius:3px;overflow:hidden;margin-bottom:40px;box-shadow:0 8px 30px rgba(0,0,0,.12);transition:transform .2s}
+.ceo-card:hover{transform:translateY(-2px)}
+.ceo-card-left{flex:1;padding:36px 40px;border-right:1px solid rgba(255,255,255,.08)}
+.ceo-tag{font-size:9px;font-weight:600;color:var(--red);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:12px}
+.ceo-card-left h3{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:500;color:var(--white);margin-bottom:10px}
+.ceo-card-left p{font-size:12.5px;color:rgba(255,255,255,.45);line-height:1.7;max-width:440px;font-weight:300}
+.ceo-cta{display:inline-flex;align-items:center;gap:8px;background:var(--red);color:var(--white);padding:11px 22px;border-radius:2px;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-top:22px;width:fit-content;transition:background .2s}
+.ceo-card:hover .ceo-cta{background:var(--red-h)}
+.ceo-card-right{min-width:280px;padding:36px 32px;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.ceo-stat{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.ceo-stat:last-child{border-bottom:none;padding-bottom:0}
+.ceo-stat-label{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.5px;text-transform:uppercase}
+.ceo-stat-val{font-size:12px;color:rgba(255,255,255,.85);font-weight:500}
+
+/* Portal grid */
+.portal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px}
+.portal-card{background:var(--white);border:1px solid var(--border);border-radius:3px;padding:26px 24px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+.portal-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.portal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--red))}
+.portal-icon{width:38px;height:38px;border-radius:3px;background:var(--cream-d);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px}
+.portal-card h3{font-size:14px;font-weight:600;color:var(--charcoal);letter-spacing:.2px;margin-bottom:6px}
+.portal-card p{font-size:11.5px;color:var(--warm);line-height:1.6;margin-bottom:18px;min-height:52px}
+.portal-go{font-size:10px;font-weight:600;color:var(--accent,var(--red));letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.portal-go::after{content:'→';transition:transform .2s}
+.portal-card:hover .portal-go::after{transform:translateX(3px)}
+
+/* Admin section */
+.admin-card{display:flex;align-items:center;gap:24px;background:var(--white);border:1px solid var(--border);border-left:3px solid var(--charcoal);border-radius:3px;padding:24px 28px;margin-bottom:40px}
+.admin-icon{width:44px;height:44px;border-radius:3px;background:var(--charcoal-dark);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.admin-body{flex:1}
+.admin-body h3{font-size:14px;font-weight:600;color:var(--charcoal);margin-bottom:3px}
+.admin-body p{font-size:11.5px;color:var(--warm);line-height:1.6}
+.admin-badge{font-size:9px;font-weight:600;color:var(--warm);letter-spacing:1px;text-transform:uppercase;background:var(--cream-d);border:1px solid var(--border);padding:4px 10px;border-radius:2px;flex-shrink:0}
+.admin-go{font-size:10px;font-weight:600;color:var(--charcoal);letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.admin-go::after{content:'→'}
+
+/* RAG legend */
+.rag-panel{background:var(--cream-d);border:1px solid var(--border);border-radius:3px;padding:22px 26px}
+.rag-panel-hdr{font-size:11px;font-weight:600;color:var(--charcoal);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.rag-panel-sub{font-size:11px;color:var(--warm);margin-bottom:18px;line-height:1.6}
+.rag-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.rag-item{display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:2px;padding:12px 14px}
+.rag-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rag-item strong{font-size:11px;color:var(--charcoal);display:block}
+.rag-item span{font-size:10px;color:var(--warm)}
+
+/* Workflow strip */
+.flow-strip{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);font-size:11px;color:var(--warm);line-height:1.8}
+.flow-strip strong{color:var(--charcoal)}
+
+/* ── FOOTER ── */
+.hub-footer{background:var(--charcoal-dark);padding:26px 40px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.06)}
+.hub-footer-text{font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.5px}
+.hub-footer-yr{font-size:10px;color:rgba(255,255,255,.15)}
+
+@media(max-width:900px){
+  .portal-grid{grid-template-columns:1fr 1fr}
+  .ceo-card{flex-direction:column}
+  .ceo-card-left{border-right:none;border-bottom:1px solid rgba(255,255,255,.08)}
+  .ceo-card-right{min-width:unset}
+  .rag-legend{grid-template-columns:1fr 1fr}
+  .hero-title{font-size:34px}
+}
+@media(max-width:600px){
+  .portal-grid{grid-template-columns:1fr}
+  .rag-legend{grid-template-columns:1fr}
+  .hero{padding:40px 20px 48px}
+  .hub-body{padding:32px 20px 48px}
+  .hub-footer{padding:18px 20px;flex-direction:column;gap:8px;text-align:center}
+  .hero-title{font-size:28px}
+  .admin-card{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <a href="index.html" class="nav-back">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    Mangalam HQ
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="wordmark">
+      <span class="wordmark-mark">Mangalam Landmarks</span>
+      <span class="wordmark-sub">LLP</span>
+    </div>
+    <div class="hub-date">
+      <div class="hub-date-dot"></div>
+      <div class="hub-date-text">Today</div>
+      <div class="hub-date-val" id="hub-date-val">—</div>
+    </div>
+    <div class="hero-eyebrow">Engineering Command</div>
+    <div class="hero-title">Construction<br/><strong>Dashboard Suite</strong></div>
+    <div class="hero-sub">Daily site updates, schedule accountability, quality inspections, and material tracking across all active projects — Miraya, Starview, Shyni, Niyoshi, Mithila-1, Mithila-2, Myra, Momento, Marvel, and Midas City.</div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="hub-body">
+
+  <!-- CEO / COO -->
+  <a href="engineering_ceo.html" style="display:block">
+    <div class="ceo-card">
+      <div class="ceo-card-left">
+        <div class="ceo-tag">Read-Only · No Login</div>
+        <h3>CEO / COO Command Centre</h3>
+        <p>Every project, every deviation, at a glance — schedule slippage against the original baseline, quality flags, NCR status, and open escalations across the full portfolio.</p>
+        <div class="ceo-cta">Open Command Centre →</div>
+      </div>
+      <div class="ceo-card-right">
+        <div class="ceo-stat"><span class="ceo-stat-label">Sites Tracked</span><span class="ceo-stat-val">10</span></div>
+        <div class="ceo-stat"><span class="ceo-stat-label">Schedule Deviation</span><span class="ceo-stat-val">Floor + Activity level</span></div>
+        <div class="ceo-stat"><span class="ceo-stat-label">Accountability</span><span class="ceo-stat-val">Immutable baseline, versioned revisions</span></div>
+      </div>
+    </div>
   </a>
-  <div class="nav-div"></div>
-  <span class="nav-tag">Engineering Suite</span>
-  <div class="nav-clock"><div class="dot"></div><span id="clk"></span></div>
-</nav>
 
-<section class="hero">
-  <div class="hero-in">
-    <div class="hero-tag">Mangalam HQ &nbsp;&middot;&nbsp; Engineering</div>
-    <h1 class="hero-h1">Engineering <strong>Suite.</strong></h1>
-    <p class="hero-sub">Daily site delivery and labor intelligence, in one folder — quality, safety, store and admin logs from every active site, plus PM-raised labor requirements, CBD-arranged supply, cross-verification and site profitability ranking.</p>
-  </div>
-</section>
-
-<main class="main">
-  <div class="grid">
-
-    <!-- ENGINEERING PORTAL -->
-    <a href="https://engineering-daily-updates.vercel.app" target="_blank" class="card c-navy" id="engineering-portal-card">
-      <div class="stripe"></div>
-      <div class="cb">
-        <div class="ctop">
-          <div class="cico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20M17 20V4a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v16"/><path d="M12 9h.01"/><path d="M7 20v-4h10v4"/></svg></div>
-          <span class="cpill">Live</span>
-        </div>
-        <div class="cname">Engineering Portal</div>
-        <div class="cdesc">Daily site updates — quality checks, safety, store and admin across all active construction sites.</div>
-        <div class="ctags"><span class="tag">Quality</span><span class="tag">Safety</span><span class="tag">Store</span><span class="tag">Admin</span><span class="tag">Daily Log</span></div>
-      </div>
-      <div class="cfoot">
-        <span class="cfoot-l">16+ active sites &middot; <strong>Jigyasa-powered</strong></span>
-        <span class="cbtn">Open Portal <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+  <!-- PORTAL GRID -->
+  <div class="section-label"><h2>Site &amp; Department Portals</h2><span>Login required</span></div>
+  <div class="portal-grid">
+    <a href="pm_portal.html">
+      <div class="portal-card" style="--accent:#cc2a2a">
+        <div class="portal-icon">🏗️</div>
+        <h3>PM Portal</h3>
+        <p>Daily floor progress, flat-wise finishing activity, weekly commitment plans, and material indents.</p>
+        <div class="portal-go">Open Portal</div>
       </div>
     </a>
-
-    <!-- LABOR INTELLIGENCE -->
-    <a href="https://labor-intelligence.vercel.app/" target="_blank" class="card c-gold" id="labor-intelligence-card">
-      <div class="stripe"></div>
-      <div class="cb">
-        <div class="ctop">
-          <div class="cico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <span class="cpill">New</span>
-        </div>
-        <div class="cname">Labor Intelligence</div>
-        <div class="cdesc">Labor benchmarking against tasks — PM requirements by trade &amp; mason, CBD-arranged supply, cross-verification, demand-supply gaps and site profitability ranking.</div>
-        <div class="ctags"><span class="tag">PM Requirement</span><span class="tag">CBD Supply</span><span class="tag">Cross-Verify</span><span class="tag">Profitability</span></div>
-      </div>
-      <div class="cfoot">
-        <span class="cfoot-l">PM / CBD / CEO views &middot; <strong>Jigyasa-powered</strong></span>
-        <span class="cbtn">Open Tool <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+    <a href="store_portal.html">
+      <div class="portal-card" style="--accent:#92400e">
+        <div class="portal-icon">📦</div>
+        <h3>Store Portal</h3>
+        <p>Material stock tracking, indent fulfilment, and daily opening/received/consumed/closing entries.</p>
+        <div class="portal-go">Open Portal</div>
       </div>
     </a>
-
+    <a href="quality_safety_portal.html">
+      <div class="portal-card" style="--accent:#166534">
+        <div class="portal-icon">🔍</div>
+        <h3>Quality &amp; Safety</h3>
+        <p>Inspection ratings, review queue sign-off, and NCR (Non-Conformance Report) issuance.</p>
+        <div class="portal-go">Open Portal</div>
+      </div>
+    </a>
   </div>
-</main>
 
-<p class="note">Both tools feed live data into Jigyasa — ask about site delivery status, labor demand-supply gaps or site profitability from the HQ home page without opening either tool directly.</p>
+  <!-- ADMIN -->
+  <div class="section-label"><h2>Administration</h2><span>SSS / RP only</span></div>
+  <a href="admin_portal.html">
+    <div class="admin-card">
+      <div class="admin-icon">⚙️</div>
+      <div class="admin-body">
+        <h3>Admin Portal</h3>
+        <p>Floor &amp; flat-activity schedules with versioned revisions, milestones, user management, RFI queue, and Target vs Achievement deviation reporting.</p>
+      </div>
+      <div class="admin-badge">Restricted</div>
+      <div class="admin-go">Open</div>
+    </div>
+  </a>
+
+  <!-- RAG LEGEND -->
+  <div class="rag-panel">
+    <div class="rag-panel-hdr">How Deviation Is Measured</div>
+    <div class="rag-panel-sub">Every floor and finishing activity is checked against its <strong style="color:var(--charcoal)">original baseline</strong> — the first schedule ever saved. Revisions move the working target but never reset this clock.</div>
+    <div class="rag-legend">
+      <div class="rag-item"><div class="rag-dot" style="background:var(--ok)"></div><div><strong>On Track</strong><span>At or ahead of baseline</span></div></div>
+      <div class="rag-item"><div class="rag-dot" style="background:#c88a1f"></div><div><strong>Slipping</strong><span>1–14 days behind</span></div></div>
+      <div class="rag-item"><div class="rag-dot" style="background:var(--danger)"></div><div><strong>Breached</strong><span>15+ days behind</span></div></div>
+      <div class="rag-item"><div class="rag-dot" style="background:var(--light)"></div><div><strong>No Data</strong><span>Not yet scheduled</span></div></div>
+    </div>
+    <div class="flow-strip">
+      <strong>Step 1:</strong> Admin sets floor &amp; flat-activity schedules &nbsp;→&nbsp;
+      <strong>Step 2:</strong> PMs submit daily progress &nbsp;→&nbsp;
+      <strong>Step 3:</strong> CEO/COO sees deviation automatically, revisions logged with reasons
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="hub-footer">
+  <div class="hub-footer-text">Mangalam Landmarks LLP &nbsp;·&nbsp; Engineering Dashboard Suite &nbsp;·&nbsp; Internal Use Only</div>
+  <div class="hub-footer-yr" id="footer-yr"></div>
+</div>
 
 <script>
-function tick(){
-  var t=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date());
-  var e=document.getElementById('clk'); if(e) e.textContent=t+' IST';
-}
-tick(); setInterval(tick,1000);
+const d = new Date();
+document.getElementById('hub-date-val').textContent = d.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+document.getElementById('footer-yr').textContent = '© ' + d.getFullYear();
 </script>
+
 </body>
 </html>
