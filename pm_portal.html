@@ -353,16 +353,29 @@ canvas{max-height:220px}
       </div>
 
       <div class="ml-card">
-        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">👷</div><h3>Raise Labor Requirement</h3><span>Visible to CBD immediately</span></div>
+        <div class="ml-card-hdr"><div class="ml-card-hdr-icon">👷</div><h3>Raise Requirement for a Task</h3><span>Fill task details once — add every skill &amp; material it needs below</span></div>
         <div class="ml-card-body">
           <div class="ml-grid-4">
             <div class="ml-field"><label>Building <span style="color:var(--danger)">*</span></label><select id="lab-bld"><option value="">Select Building</option></select></div>
-            <div class="ml-field"><label>Skill Type <span style="color:var(--danger)">*</span></label><select id="lab-skill"></select></div>
-            <div class="ml-field"><label>Number Required <span style="color:var(--danger)">*</span></label><input type="number" min="0" id="lab-count" placeholder="e.g. 12"/></div>
+            <div class="ml-field" style="grid-column:span 2"><label>Task / Reason <span style="color:var(--danger)">*</span></label><input type="text" id="lab-task" placeholder="e.g. Tower B brickwork"/></div>
             <div class="ml-field"><label>Period</label><input type="text" id="lab-period" placeholder="e.g. this week"/></div>
           </div>
-          <div class="ml-field" style="margin-bottom:14px"><label>Task / Reason <span style="color:var(--danger)">*</span></label><input type="text" id="lab-task" placeholder="e.g. Tower B brickwork"/></div>
-          <button class="ml-submit-btn" style="position:static" onclick="submitLaborReq()"><span>Raise Requirement</span></button>
+
+          <div style="margin:16px 0 8px;font-size:11px;font-weight:600;color:var(--charcoal)">Labour Needed</div>
+          <table class="ml-tbl">
+            <thead><tr><th style="width:60%">Skill Type</th><th>Number Required</th><th></th></tr></thead>
+            <tbody id="lab-skill-rows"></tbody>
+          </table>
+          <div style="padding:8px 0"><button class="ml-add-row" onclick="addLabSkillRow()">+ Add Another Skill</button></div>
+
+          <div style="margin:16px 0 8px;font-size:11px;font-weight:600;color:var(--charcoal)">Material Needed <span style="font-weight:400;color:var(--warm)">(optional — becomes an indent to Store)</span></div>
+          <table class="ml-tbl">
+            <thead><tr><th style="width:40%">Material</th><th>Quantity</th><th>Unit</th><th></th></tr></thead>
+            <tbody id="lab-mat-rows"></tbody>
+          </table>
+          <div style="padding:8px 0"><button class="ml-add-row" onclick="addLabMatRow()">+ Add Another Material</button></div>
+
+          <button class="ml-submit-btn" style="position:static;margin-top:12px" onclick="submitLaborReqAll()"><span>Raise Requirement for This Task →</span></button>
         </div>
       </div>
 
@@ -1496,12 +1509,33 @@ function initLaborTab() {
   const bldSel = document.getElementById('lab-bld');
   bldSel.innerHTML = '<option value="">Select Building</option>' +
     buildings.map(b => { const n = b.building||b.name||''; return `<option value="${n}">${n}</option>`; }).join('');
-  document.getElementById('lab-skill').innerHTML = LABOR_SKILLS.map(s => `<option>${s}</option>`).join('');
   document.getElementById('lab-daily-body').innerHTML = LABOR_SKILLS.map(s =>
     `<tr data-skill="${s}"><td>${s}</td><td><input type="number" min="0" value="0" style="width:90px"/></td></tr>`
   ).join('');
+  document.getElementById('lab-skill-rows').innerHTML = '';
+  document.getElementById('lab-mat-rows').innerHTML = '';
+  addLabSkillRow();
   loadLaborQueue();
   loadCrossVerify();
+}
+
+function addLabSkillRow() {
+  document.getElementById('lab-skill-rows').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><select class="lab-skill-sel">${LABOR_SKILLS.map(s => `<option>${s}</option>`).join('')}</select></td>
+      <td><input type="number" min="0" class="lab-skill-count" placeholder="e.g. 12" style="width:90px"/></td>
+      <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer">✕</button></td>
+    </tr>`);
+}
+
+function addLabMatRow() {
+  document.getElementById('lab-mat-rows').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><input type="text" class="lab-mat-name" placeholder="e.g. Cement OPC 53"/></td>
+      <td><input type="number" min="0" class="lab-mat-qty" style="width:90px"/></td>
+      <td><input type="text" class="lab-mat-unit" placeholder="bags/cum/kg" style="width:100px"/></td>
+      <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer">✕</button></td>
+    </tr>`);
 }
 
 async function loadLaborQueue() {
@@ -1523,26 +1557,55 @@ async function loadLaborQueue() {
   }
 }
 
-async function submitLaborReq() {
+async function submitLaborReqAll() {
   const bld = document.getElementById('lab-bld').value;
-  const skill = document.getElementById('lab-skill').value;
-  const count = parseInt(document.getElementById('lab-count').value || 0);
-  const period = document.getElementById('lab-period').value.trim();
   const task = document.getElementById('lab-task').value.trim();
-  if (!bld || !skill || !count || !task) {
-    toast('Building, skill, count and task are all required','err'); return;
+  const period = document.getElementById('lab-period').value.trim();
+  if (!bld || !task) { toast('Building and task are required','err'); return; }
+
+  const skillRows = Array.from(document.querySelectorAll('#lab-skill-rows tr')).map(tr => ({
+    skill: tr.querySelector('.lab-skill-sel').value,
+    count: parseInt(tr.querySelector('.lab-skill-count').value || 0)
+  })).filter(r => r.count > 0);
+
+  const matRows = Array.from(document.querySelectorAll('#lab-mat-rows tr')).map(tr => ({
+    material: tr.querySelector('.lab-mat-name').value.trim(),
+    qty: parseFloat(tr.querySelector('.lab-mat-qty').value || 0),
+    unit: tr.querySelector('.lab-mat-unit').value.trim()
+  })).filter(m => m.material && m.qty > 0);
+
+  if (!skillRows.length && !matRows.length) {
+    toast('Add at least one skill or material with a quantity','err'); return;
   }
-  try {
-    const r = await apiCall('submitLaborRequirement', {
-      site: user.site, building: bld, skill, required: count, task, period, raisedBy: user.username
-    });
-    if (!r.ok) throw new Error(r.error || 'Failed');
-    toast('✓ Requirement raised — visible to CBD now','ok');
-    document.getElementById('lab-count').value = '';
+
+  let okSkills = 0, okMats = 0, errs = [];
+  for (const row of skillRows) {
+    try {
+      const r = await apiCall('submitLaborRequirement', {
+        site: user.site, building: bld, skill: row.skill, required: row.count, task, period, raisedBy: user.username
+      });
+      if (r.ok) okSkills++; else errs.push(row.skill + ': ' + (r.error||'failed'));
+    } catch(e) { errs.push(row.skill + ': ' + e.message); }
+  }
+  for (const row of matRows) {
+    try {
+      const r = await apiCall('submitMaterialRequirement', {
+        site: user.site, building: bld, material: row.material, qty: row.qty, unit: row.unit, task, period, raisedBy: user.username
+      });
+      if (r.ok) okMats++; else errs.push(row.material + ': ' + (r.error||'failed'));
+    } catch(e) { errs.push(row.material + ': ' + e.message); }
+  }
+
+  if (okSkills || okMats) {
+    toast(`✓ Raised ${okSkills} skill(s) + ${okMats} material(s) for "${task}"`, 'ok');
     document.getElementById('lab-task').value = '';
     document.getElementById('lab-period').value = '';
+    document.getElementById('lab-skill-rows').innerHTML = '';
+    document.getElementById('lab-mat-rows').innerHTML = '';
+    addLabSkillRow();
     loadLaborQueue(); loadCrossVerify();
-  } catch(e) { toast(e.message,'err'); }
+  }
+  if (errs.length) toast('Some rows failed: ' + errs.join('; '), 'err');
 }
 
 async function submitLaborDailyAll() {
